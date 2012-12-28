@@ -1,0 +1,4 @@
+qunit.js:     1.10.0
+qunit.css:    1.10.0
+
+sinon.js:     1.5.2
