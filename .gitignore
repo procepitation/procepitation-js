@@ -3,3 +3,9 @@
 .settings/
 .project
 .classpath
+
+# test files
+pyweb.log
+
+# scratch files
+/scratch/
