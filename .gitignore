@@ -5,7 +5,7 @@
 .classpath
 
 # test files
-pyweb.log
+/.webserver.log
 
 # scratch files
 /scratch/
