@@ -1,0 +1,87 @@
+
+[FLOW-ELEMENT]
+
+// meta
+sequenceFlow
+callActivity
+
+// sub
+adHocSubProcess
+subProcess
+transaction
+
+// concrete
+complexGateway
+eventBasedGateway
+exclusiveGateway
+inclusiveGateway
+parallelGateway
+
+businessRuleTask
+manualTask
+receiveTask
+scriptTask
+sendTask
+serviceTask
+userTask
+task
+
+endEvent
+startEvent
+
+// event
+implicitThrowEvent
+intermediateCatchEvent
+intermediateThrowEvent
+boundaryEvent
+event
+
+// extra
+dataObject
+dataObjectReference
+dataStoreReference
+
+callChoreography
+subChoreography
+choreographyTask
+
+----------
+[ROOT
+
+[documentation]
+category
+
+[correlation]
+correlationProperty
+
+[collaboration]
+collaboration
+conversation
+partnerEntity
+partnerRole
+
+[activities]
+globalBusinessRuleTask
+globalScriptTask
+globalTask
+
+globalManualTask
+globalUserTask
+
+================
+
+* [service package]
+interface
+
+* [common package]
+error
+escalation
+itemDefinition
+message
+resource
+
+* [Process package]
+process
+dataStore
+signal
+
