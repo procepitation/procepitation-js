@@ -11,6 +11,10 @@ var loadAndParse = function(bpmn2File) {
   xmlhttp.open("GET", bpmn2File, false);
   xmlhttp.send();
   bpmn2Txt = xmlhttp.responseText;
+
+  if( xmlhttp.status != 200 ) { 
+    throw new Error( "Unable to GET '" + bpmn2File + "': " + xmlhttp.statusText );
+  }
   
   if(window.DOMParser) {
     parser = new DOMParser();
@@ -23,5 +27,4 @@ var loadAndParse = function(bpmn2File) {
   }
   return xmlDoc;
 }
-  
-  
+

@@ -12,12 +12,18 @@ var compiler = {
     };
     NodeRepr.prototype = new Object();
       
+    function UnsupError(element) { 
+      this.message = element + " is/are not yet supported.";
+    }
+    UnsupError.prototype = new Error();
+
     var elementCategory = { 
-      // meta
-      sequenceFlow: "meta", callActivity: "meta",
+      // seq
+      sequenceFlow: "seq", 
       
       // sub
-      adHocSubProcess: "sub", subProcess: "sub", transaction: "sub",
+      adHocSubProcess: "sub", subProcess: "sub", 
+      callActivity: "sub", transaction: "sub",
       
       // concrete
       complexGateway: "step", eventBasedGateway: "step", 
@@ -53,7 +59,7 @@ var compiler = {
         }
       }
       if( node.localName != nodeName ) { 
-        throw new Perror( "Element local name is " + node.localName + "; expected '" + nodeName + "'" );
+        throw new Error( "Element local name is " + node.localName + "; expected '" + nodeName + "'" );
       } 
       for( var a = (node.attributes.length-1); a >= 0; --a ) { 
         var attr = node.attributes[a];
@@ -84,7 +90,7 @@ var compiler = {
             case "message":
             case "resource":
             case "interface":
-              throw new Perror("Root-level '" + child.localName + "' elements");
+              throw new UnsupError("Root-level '" + child.localName + "' elements");
               break;
             default: 
               throw new Error("Root-level '" + child.localName + "' elements are NOT supported.");
@@ -94,7 +100,7 @@ var compiler = {
     }
 
     // Create (Intermediate) Representation: analyzeProcess(node) 
-    var analyzeProcess = function(node, procRepToModify) { 
+    var analyzeProcess = function(node, addToProcRep) { 
       for( var c = (node.childNodes.length-1); c >= 0; --c ) {
         if( node.childNodes[c].prefix == bpmn2Prefix && node.childNodes[c].nodeType == 1 ) { 
           var child = node.childNodes[c];
@@ -104,11 +110,18 @@ var compiler = {
             var attr = child.attributes[a]; 
             nodeRep[attr.localName] = attr.value;
             if( attr.prefix != bpmn2Prefix ) { 
-              throw new Perror( "The " + attr.localName + " (" + attr.prefix + " namespace) on element " + child.localName );
+              throw new UnsupError( "The " + attr.localName + " (" + attr.prefix + " namespace) on element " + child.localName );
             }
           }
-          var typeMap = procRepToModify[elementCategory[nodeRep.repType]];
-          typeMap[nodeRep.id] = nodeRep;
+          var typeMap = addToProcRep[elementCategory[nodeRep.repType]];
+          if( nodeRep.repType != "sequenceFlow" ) { 
+            typeMap[nodeRep.id] = nodeRep;
+            if( ! nodeRep.id ) { 
+              throw new Error( "A " + nodeRep.repType + " element must have an 'id' attribute." );
+            }
+          } else { 
+            typeMap[typeMap.length] = nodeRep;
+          }
         } 
       }
     }
@@ -123,7 +136,11 @@ var compiler = {
       if( newProcRep[elementCategory[elem]] ) {
         continue;
       }
-      newProcRep[elementCategory[elem]] = {};
+      if( elem != "sequenceFlow" ) { 
+        newProcRep[elementCategory[elem]] = {};
+      } else { 
+        newProcRep[elementCategory[elem]] = [];
+      }
     }
   
     analyzeDefinition(defNode, newProcRep);
@@ -151,10 +168,6 @@ var compiler = {
   // ---
 
   compile: function(xmlDoc) {
-    function Perror(element) { 
-      this.message = element + " is/are not yet supported.";
-    }
-    Perror.prototype = new Error();
     
     var procRep = this.createRep(xmlDoc);
     procRep = this.optimize(procRep);
