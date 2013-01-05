@@ -1,0 +1,51 @@
+
+@augments    : This object adds onto a parent object.
+@author      : Documents the author of an item.
+@borrows     : This object uses something from another object.
+@classdesc   : Use the following text to describe the entire class.
+@constant    : Document an object as a constant.
+@constructor : This function is intended to be called with the "new" keyword.
+@constructs  : This function member will be the constructor for the previous class.
+@copyright   : Document some copyright information.
+@default     : Document the default value.
+@deprecated  : Document that this is no longer the preferred way.
+@desc        : Describe the object.
+@enum        : Document a collection of related properties.
+@event       : Document an event.
+@example     : Provide an example of how to use a documented item.
+@exports     : Document the name of a JavaScript module.
+@file        : Describe a file.
+@fires       : Describe the events this method may fire.
+@global      : Document a global object.
+@ignore      : Remove this from the final output. [todo]
+@inner       : Document an inner object.
+@instance    : Document an instance member. [todo]
+@kind        : What kind of object is this? [todo]
+@license     : Document the software license that applies to this code. [todo]
+@member      : Document a member. [todo]
+@memberof    : This object is a member or another object. [todo]
+@method      : Describe a method or function. [todo]
+@mixes       : This object mixes in all the members from another object. [todo]
+@mixin       : Document a mix-in object. [todo]
+@module      : Document a JavaScript module. [todo]
+@name        : Document the name of an object. [todo]
+@namespace   : Document a namespace object. [todo]
+@param       : >Document the parameter to a function.
+@private     : This member is meant to be private. [todo]
+@property    : Document a property of an object.
+@protected   : This member is meant to be protected. [todo]
+@public      : This member is meant to be public. [todo]
+@readonly    : This variable is meant to be readonly. [todo]
+@requires    : This JavaScript module requires another JavaScript module. [todo]
+@returns     : Document the return value of a function.
+@see         : Refer to some other documentation for more information. [todo]
+@since       : When was this feature added? [todo]
+@summary     : A shorter version of the full description. [todo]
+@this        : What does the this keyword refer to here? [todo]
+@throws      : Describe what errors could be thrown. [todo]
+@todo        : Document tasks to be completed for an object. [todo]
+@tutorial    : Insert a link to an included tutorial file.
+@typedef     : Document a custom type. [todo]
+@type        : Document the type of an object. [todo]
+@version     : Documents the version number of an item.
+
