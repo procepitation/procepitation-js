@@ -77,7 +77,7 @@ var compiler = {
     var analyzeDefinition = function(defNode, createdProcRep) { 
       for( var n = (defNode.childNodes.length-1); n >= 0; --n ) {
         var child = defNode.childNodes[n];
-        if( child.prefix == bpmn2Prefix && child.nodeType == 1 ) { 
+        if( child.nodeType == 1 && child.prefix == bpmn2Prefix ) { 
           switch(child.localName) { 
             case "process":
               var procNode = analyzeProcess(child, createdProcRep);
@@ -102,7 +102,7 @@ var compiler = {
     // Create (Intermediate) Representation: analyzeProcess(node) 
     var analyzeProcess = function(node, addToProcRep) { 
       for( var c = (node.childNodes.length-1); c >= 0; --c ) {
-        if( node.childNodes[c].prefix == bpmn2Prefix && node.childNodes[c].nodeType == 1 ) { 
+        if( node.childNodes[c].nodeType == 1 && node.childNodes[c].prefix == bpmn2Prefix ) { 
           var child = node.childNodes[c];
   
           var nodeRep = new NodeRepr(child.localName);
@@ -113,6 +113,11 @@ var compiler = {
               throw new UnsupError( "The " + attr.localName + " (" + attr.prefix + " namespace) on element " + child.localName );
             }
           }
+          if( child.childNodes.length > 0 ) { 
+            recursiveAddToNodeRep(child, nodeRep);
+          }
+
+          // add to process representation
           var typeMap = addToProcRep[elementCategory[nodeRep.repType]];
           if( nodeRep.repType != "sequenceFlow" ) { 
             typeMap[nodeRep.id] = nodeRep;
@@ -125,7 +130,33 @@ var compiler = {
         } 
       }
     }
-    
+
+    var recursiveAddToNodeRep = function(rNode, rNodeRep) { 
+      for( var rc = rNode.childNodes.length-1; rc >= 0; --rc ) { 
+        rChild = rNode.childNodes[rc];
+        // bpmn2 element
+        if( rChild.nodeType == 1 && rChild.prefix == bpmn2Prefix ) { 
+          if( rChild.attributes.length > 0 || rChild.childNodes.length > 0 ) { 
+            var childNodeRep = {};
+            for( var ra = rChild.attributes.length-1; ra >= 0; --ra ) { 
+              if( attr.prefix == bpmn2Prefix ) { 
+                childNodeRep[ra.localName] = ra.value;
+              }
+            }
+            rNodeRep[rChild.localName] = childNodeRep;
+            if( rChild.childNodes.length > 0 ) { 
+              recursiveAddToNodeRep(rChild, rNodeRep[rChild.localName]);
+            } 
+          } else { 
+            rNodeRep[rChild.localName] = true;
+          }
+        // text
+        } else if( rChild.nodeType == 3 && /\S/.test(rChild.data) ) { 
+          rNodeRep[rChild.nodeName] = rChild.data;
+        }
+      }
+    }
+
     // Create (Intermediate) Representation: MAIN
 
     var defNode = findDefinition(xmlDoc);
