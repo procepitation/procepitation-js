@@ -45,7 +45,10 @@ var compiler = {
       dataStoreReference: "data",
      
       callChoreography: "choreography", subChoreography: "choreography",                                      
-      choreographyTask: "choreography"
+      choreographyTask: "choreography",
+
+      // signal
+      signal: "msg", message: "msg"
     }
 
     // Create (Intermediate) Representation: findDefinition(node) 
@@ -82,12 +85,14 @@ var compiler = {
             case "process":
               var procNode = analyzeProcess(child, createdProcRep);
               break;
+            case "message":
+            case "signal":
+              analyzeMessage(child, createdProcRep);
+              break;
             case "itemDefinition":
             case "error":
-            case "signal":
             case "dataStore":
             case "escalation":
-            case "message":
             case "resource":
             case "interface":
               throw new UnsupError("Root-level '" + child.localName + "' elements");
@@ -101,6 +106,7 @@ var compiler = {
 
     // Create (Intermediate) Representation: analyzeProcess(node) 
     var analyzeProcess = function(node, addToProcRep) { 
+      // elements of process added to process repr. collection objects
       for( var c = (node.childNodes.length-1); c >= 0; --c ) {
         if( node.childNodes[c].nodeType == 1 && node.childNodes[c].prefix == bpmn2Prefix ) { 
           var child = node.childNodes[c];
@@ -129,18 +135,26 @@ var compiler = {
           }
         } 
       }
+      // attributes of process added as process repr. object fields
+      for( var a = (child.attributes.length-1); a >= 0; --a ) {  
+        var attr = child.attributes[a]; 
+        addToProcRep[attr.localName] = attr.value;
+        if( attr.prefix != bpmn2Prefix ) { 
+          throw new UnsupError( "The " + attr.localName + " (" + attr.prefix + " namespace) on element " + child.localName );
+        }
+      }
     }
 
     var recursiveAddToNodeRep = function(rNode, rNodeRep) { 
-      for( var rc = rNode.childNodes.length-1; rc >= 0; --rc ) { 
+      for( var rc = (rNode.childNodes.length-1); rc >= 0; --rc ) { 
         rChild = rNode.childNodes[rc];
         // bpmn2 element
         if( rChild.nodeType == 1 && rChild.prefix == bpmn2Prefix ) { 
           if( rChild.attributes.length > 0 || rChild.childNodes.length > 0 ) { 
             var childNodeRep = {};
-            for( var ra = rChild.attributes.length-1; ra >= 0; --ra ) { 
-              if( attr.prefix == bpmn2Prefix ) { 
-                childNodeRep[ra.localName] = ra.value;
+            for( var ra = (rChild.attributes.length-1); ra >= 0; --ra ) { 
+              if( rChild.attributes[ra].prefix == bpmn2Prefix ) { 
+                childNodeRep[ra.localName] = rChild.attributes[ra].value;
               }
             }
             rNodeRep[rChild.localName] = childNodeRep;
@@ -154,6 +168,33 @@ var compiler = {
         } else if( rChild.nodeType == 3 && /\S/.test(rChild.data) ) { 
           rNodeRep[rChild.nodeName] = rChild.data;
         }
+      }
+    }
+
+    // Create (Intermediate) Representation: signal
+    var analyzeMessage = function(msgNode, addToProcRep) { 
+      if( msgNode.nodeType == 1 && msgNode.prefix == bpmn2Prefix ) { 
+        var msgRep = new NodeRepr(msgNode.localName);
+        // attributes of process added as message repr. object fields
+        for( var a = (msgNode.attributes.length-1); a >= 0; --a ) {  
+          var attr = msgNode.attributes[a]; 
+          msgRep[attr.localName] = attr.value;
+          if( attr.prefix != bpmn2Prefix ) { 
+            throw new UnsupError( "The " + attr.localName + " (" + attr.prefix + " namespace) on element " + msgNode.localName );
+          }
+        }
+        // recursively add sub-elements
+        if( msgNode.childNodes.length > 0 ) { 
+          recursiveAddToNodeRep(msgNode, msgRep);
+        }
+        // add to process repr. 
+        var typeMap = addToProcRep[elementCategory[msgRep.repType]];
+        typeMap[msgRep.id] = msgRep;
+        if( ! msgRep.id ) { 
+          throw new Error( "A " + msgRep.repType + " element must have an 'id' attribute." );
+        }
+      } else { 
+        throw new UnsupError( "Root-Level '" + msgNode.localName + "' elements in the " + msgNode.prefix + " namespace)" );
       }
     }
 
