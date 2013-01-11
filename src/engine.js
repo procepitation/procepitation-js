@@ -1,9 +1,5 @@
-function done() { 
-  console.log("===");
-  console.log( "Test done: " +  new Date().toLocaleTimeString());
-  console.log("");
-};
 
+var engine = { 
 // Constants
 
 var map = { 
@@ -81,6 +77,3 @@ var inst = [
   new Node(map.end)
 ];
 
-run(inst);
-
-done(); 
