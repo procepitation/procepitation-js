@@ -1,0 +1,40 @@
+! Start -> Task_0
+
+> Task_A -> Join_AB (> Task_C)
+  ! Join_AB -> Task_C
+    < (Join_AB >) Task_C -> End
+
+> Fork_B -> Task_B2 (> Join_B)
+  ! Task_B2 -> Join_B
+
+! Task_B1 -> Join_B
+
+< (Start >) Task_0 -> Fork_AB
+< (Task_0 >) Fork_AB -> Task_B
+< (Task_B2 >) Join_B -> Join_AB
+ *E Join_AB < Join_B  [!]
+< (Task_0 >) Fork_AB -> Task_A
+> Fork_AB -> Task_A (> Join_AB)
+ *B Fork_AB > Task_A
+< (Fork_AB >) Task_B -> Fork_B
+> Task_B -> Fork_B (> Task_B2)
+< (Task_B >) Fork_B -> Task_B1
+> Fork_B -> Task_B1 (> Join_B)
+ *B Fork_B > Task_B1
+X Fork_B -> Task_B1
+X Task_B -> Fork_B
+X Fork_AB -> Task_A
+
+12: Start > Task_0
+11: Join_AB > Task_C
+10: Task_B2 > Join_B
+9: Fork_B > Task_B2
+8: Task_C > End
+7: Task_A > Join_AB
+6: Task_B1 > Join_B
+5: Task_0 > Fork_AB
+4: Fork_AB > Task_B
+3: Join_B > Join_AB [!]
+2: Fork_AB > Task_A
+1: Task_B > Fork_B
+0: Fork_B > Task_B1

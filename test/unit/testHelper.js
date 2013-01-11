@@ -27,23 +27,51 @@ helper = {
     return newArr;
   },
   
-  postForkAndPreMergeTest: function(node) { 
-    if( node.next.length > 1 ) { 
-      for( var n = 0; n < node.next; ++n ) { 
-        var forkedNode = node.next[n];
-        ok( forkedNode.postFork, "postFork for: " + forkedNode.beg + " > " + forkedNode.end );
+  postForkAndPreMergeTest: function(inst, end) { 
+    var nodeBegsVisited = new Object();
+    
+    var recursivePFAndPMTest = function(node, endName) { 
+      if( nodeBegsVisited[node.beg] ) { 
+        return;
+      }
+      nodeBegsVisited[node.beg] = true;
+      
+      if( /^Join/.test( node.end ) ) {
+        if( ! node.preMerge ) { 
+          throw new Error( "preMerge for: " + node.beg + " > " + node.end);
+        }
+      }
+  
+      if( node.next ) { 
+        if( node.next.length > 1 ) { 
+          for( var f = 0; f < node.next; ++f ) { 
+            var forkedNode = node.next[f];
+            if( ! forkedNode.postFork ) { 
+              throw new Error( "postFork for: " + forkedNode.beg + " > " + forkedNode.end );
+            }
+          }
+        }
+        for( var n = 0; n < node.next.length; ++n ) { 
+          recursivePFAndPMTest(node.next[n], endName);
+        }
+      } else { 
+        if( node.end != endName ) { 
+          throw new Error( "node stairway should end in '" + endName + "' : " + node.beg + " > " + node.end );
+        }
       }
     }
-    if( /^Join/.test( node.end ) ) {
-      ok( node.preMerge, "preMerge for: " + node.beg + " > " + node.end );
+
+    if( ! inst ) { 
+      throw new Error( "Argument 'node' is not defined." );
     }
-    if( node.next ) { 
-      for( var n = 0; n < node.next; ++n ) { 
-        recPostForKAndPreMerge(node.next[n])
-      }
-    } else { 
-      ok( node.end == "End", "node stairway ends in 'END': " + node.beg + " > " + node.end );
+    if( ! end ) { 
+      throw new Error( "Argument 'endName' is not defined." );
     }
+
+    for( var g = 0; g < inst.start.length; ++g ) { 
+      recursivePFAndPMTest(inst.start[g], end);
+    }
+    return true;
   }
   
 }

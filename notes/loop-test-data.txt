@@ -1,0 +1,31 @@
+! theStart -> Script_A
+  | theStart > Script_A [undefined, undefined]
+! theStart -> Task_B
+  | theStart > Task_B [undefined, [object Object]]
+! theStart -> Task_C
+  | theStart > Task_C [undefined, [object Object],[object Object]]
+< (theStart > ) Script_A -> Loop_Excl_GW
+  | Script_A > Loop_Excl_GW [undefined, undefined]
+< (Script_A > ) Loop_Excl_GW -> Script_A
+  | Loop_Excl_GW > Script_A [[object Object], undefined]
+< (Script_A > ) Loop_Excl_GW -> ABC_Incl_Join
+  | Loop_Excl_GW > ABC_Incl_Join [undefined, [object Object]]
+< (theStart > ) Task_B -> ABC_Incl_Join
+  | Task_B > ABC_Incl_Join [[object Object], undefined]
+< (theStart > ) Task_C -> End_Incl_Join
+  | Task_C > End_Incl_Join [undefined, undefined]
+< (Loop_Excl_GW > ) ABC_Incl_Join -> End_Incl_Join
+  | ABC_Incl_Join > End_Incl_Join [[object Object], undefined]
+< (Task_C > ) End_Incl_Join -> theEnd
+  | End_Incl_Join > theEnd [undefined, undefined]
+
+9: theStart > Script_A
+8: theStart > Task_B
+7: theStart > Task_C
+6: Script_A > Loop_Excl_GW
+5: Loop_Excl_GW > Script_A
+4: Loop_Excl_GW > ABC_Incl_Join
+3: Task_B > ABC_Incl_Join
+2: Task_C > End_Incl_Join
+1: ABC_Incl_Join > End_Incl_Join
+0: End_Incl_Join > theEnd
