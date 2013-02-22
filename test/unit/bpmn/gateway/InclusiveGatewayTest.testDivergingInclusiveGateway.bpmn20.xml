@@ -19,9 +19,7 @@
     </sequenceFlow>
     
     <sequenceFlow id="flow3" sourceRef="inclusiveGw" targetRef="theTask2">
-      <conditionExpression xsi:type="tFormalExpression">
-        <![CDATA[${input <= 2}]]>
-      </conditionExpression>
+      <conditionExpression xsi:type="tFormalExpression">${input &lt;= 4}</conditionExpression>
     </sequenceFlow>
     
     <sequenceFlow id="flow4" sourceRef="inclusiveGw" targetRef="theTask3">
