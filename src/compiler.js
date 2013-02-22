@@ -1,59 +1,49 @@
 
 var compiler = { 
 
+  log : function(logMsg) { 
+    console.log( (compiler.logI++) + " " + logMsg );
+  },
+  logI : 0,
+
   createRep: function(xmlDoc) {
-  
-    var schema = new Object();
-    var bpmn2Prefix = null;
-    var bpmn2SchemaRE = new RegExp( "http://www.omg.org/spec/BPMN/201\\d+/MODEL" );
+ 
+    /**
+     * Basic objects and functions
+     */
 
     function NodeRepr(type) { 
       this.repType = type;
+      // Functional object in candy string 
+      // Should contain runtime executable logic
+      this.run = function(context) { 
+      }
     };
     NodeRepr.prototype = new Object();
-      
+
+    function SeqRepr() { 
+      // data holder for graph structure determination later
+    }
+    SeqRepr.prototype = new Object();
+
     function UnsupError(element) { 
       this.message = element + " is/are not yet supported.";
     };
     UnsupError.prototype = new Error();
 
-    var elementCategory = { 
-      // seq
-      sequenceFlow: "seq", 
-      
-      // sub
-      subProcess: "sub", adHocSubProcess: "sub", transaction: "sub",
-      
-      // concrete
-      startEvent: "step", endEvent: "step", 
-
-      callActivity: "step", 
-
-      complexGateway: "step", eventBasedGateway: "step", 
-      exclusiveGateway: "step", inclusiveGateway: "step", 
-      parallelGateway: "step",
-
-      businessRuleTask: "step", manualTask: "step", receiveTask: "step",
-      scriptTask: "step", sendTask: "step", serviceTask: "step",
-      userTask: "step", task: "step",
-      
-      // event
-      implicitThrowEvent: "event", intermediateCatchEvent: "event", 
-      intermediateThrowEvent: "event", boundaryEvent: "event", event: "event",
-      
-      // extra
-      dataObject: "data", property: "data",
-      dataObjectReference: "data", dataStoreReference: "data",
-     
-      callChoreography: "choreography", subChoreography: "choreography",                                      
-      choreographyTask: "choreography",
-
-      // signal
-      signal: "msg", message: "msg"
+    var unsupported = function(child) { 
+      throw new UnsupError("'" + child.localName + "' elements");
     }
 
-    // Create (Intermediate) Representation: findDefinition(node) 
-    var findDefinition = function(node) {
+    /** 
+     * Basic parsing
+     */
+
+    var schema = new Object();
+    var bpmn2Prefix = null;
+    const bpmn2SchemaRE = new RegExp( "http://www.omg.org/spec/BPMN/201\\d+/MODEL" );
+
+    var findDefinition = function(node, schema) {
       var nodeName = "definitions";
       for( var d = node.childNodes.length-1; d >= 0; --d ) { 
         var child = node.childNodes[d];
@@ -76,131 +66,57 @@ var compiler = {
       }
       return node;
     }
-  
-    // Create (Intermediate) Representation: analyzeDefinition(node) 
-    var analyzeDefinition = function(defNode, createdDefRep) { 
-      for( var n = defNode.childNodes.length-1; n >= 0; --n ) {
-        var child = defNode.childNodes[n];
+
+    /**
+     * root level elements in definitions
+     */
+
+    var handleDefinition = function(defNode) { 
+      var createdDefRep = {};
+
+      var level = "Root-level"
+      for( var n = defNode.children.length-1; n >= 0; --n ) {
+        var child = defNode.children[n];
         if( child.nodeType == 1 && child.prefix == bpmn2Prefix ) { 
-          switch(child.localName) { 
-            case "process":
-              var procNode = analyzeProcess(child, createdDefRep);
-              break;
-            case "message":
-            case "signal":
-              analyzeMessage(child, createdDefRep);
-              break;
-            case "itemDefinition":
-            case "error":
-            case "dataStore":
-            case "escalation":
-            case "resource":
-            case "interface":
-              throw new UnsupError("Root-level '" + child.localName + "' elements");
-              break;
-            default: 
-              throw new Error("Root-level '" + child.localName + "' elements are NOT supported.");
+          if( processRootLevelElement[child.localName] ) { 
+            processRootLevelElement[child.localName](child, createdDefRep); 
+          } else { 
+            throw new Error("Root-level '" + child.localName + "' elements are NOT supported.");
           }
-        }
+        } 
       }
+      return createdDefRep;
     }
-
-    // Create (Intermediate) Representation: analyzeProcess(node) 
-    var analyzeProcess = function(node, addToDefRep) { 
-      // elements of process added to process repr. collection objects
-      for( var c = node.childNodes.length-1; c >= 0; --c ) {
-        if( node.childNodes[c].nodeType == 1 && node.childNodes[c].prefix == bpmn2Prefix ) { 
-          var child = node.childNodes[c];
   
-          var nodeRep = new NodeRepr(child.localName);
-          for( var a = child.attributes.length-1; a >= 0; --a ) {  
-            var attr = child.attributes[a]; 
-            nodeRep[attr.localName] = attr.value;
-            if( attr.prefix != bpmn2Prefix ) { 
-              throw new UnsupError( "The " + attr.localName + " (" + attr.prefix + " namespace) on element " + child.localName );
-            }
-          }
+    var handleProcess = function(procNode, addToDefRep) { 
+      if( ! addToDefRep.process ) { 
+        addToDefRep.process = [];
+      }
+      var procRep = {};
+      addToDefRep.process.push(procRep);
 
-          var type = elementCategory[nodeRep.repType];
-          var typeMap = addToDefRep[type];
-          if( elementCategory[child.localName] == "sub" ) { 
-            if( ! typeMap ) { 
-              typeMap = addToDefRep[type] = {};
-            }
-            typeMap[nodeRep.id] = {};
-            typeMap[nodeRep.id].attr = [];
-            analyzeProcess(child, typeMap[nodeRep.id]);
-          }
-          else { 
-            if( child.childNodes.length > 0 ) { 
-              recursiveAddToNodeRep(child, nodeRep);
-            }
+      procRep.attr = {};
+      for( var a = procNode.attributes.length-1; a >= 0; --a ) { 
+        var attr = procNode.attributes[a];
+        procRep.attr[attr.localName] = attr.value;
+      } 
 
-            // add to process representation
-            if( nodeRep.repType == "sequenceFlow" ) { 
-              if( ! typeMap ) {  // TEST
-                typeMap = addToDefRep[type] = [];
-              }
-              typeMap.push( nodeRep );
-            } else { 
-              if( ! typeMap ) { 
-                typeMap = addToDefRep[type] = {};
-              }
-              typeMap[nodeRep.id] = nodeRep;
-              if( ! nodeRep.id ) { 
-                throw new Error( "A " + nodeRep.repType + " element must have an 'id' attribute." );
-              }
-            }
+      for( var n = procNode.children.length-1; n >= 0; --n ) {
+        var child = procNode.children[n];
+        if( child.nodeType == 1 && child.prefix == bpmn2Prefix ) { 
+          if( processProcessElement[child.localName] ) { 
+            processProcessElement[child.localName](child, procRep); 
+          } else { 
+            throw new UnsupError("'" + child.localName + "' elements in a process");
           }
-          
         } 
       }
 
-      // attributes of process added as process repr. object fields
-      for( var a = child.attributes.length-1; a >= 0; --a ) {  
-        var attr = child.attributes[a]; 
-        addToDefRep.attr[attr.localName] = attr.value;
-        if( attr.prefix != bpmn2Prefix ) { 
-          throw new UnsupError( "The " + attr.localName + " (" + attr.prefix + " namespace) on element " + child.localName );
-        }
-      }
     }
 
-    var recursiveAddToNodeRep = function(rNode, rNodeRep) { 
-      for( var rc = rNode.childNodes.length-1; rc >= 0; --rc ) { 
-        rChild = rNode.childNodes[rc];
-        // bpmn2 element
-        if( rChild.nodeType == 1 && rChild.prefix == bpmn2Prefix ) { 
-          if( rNodeRep[rChild.localName] ) { 
-            throw new Error( rNode.localName + "." + rChild.localName + " already exists in process representation" );
-          }
-          console.log( "+ " + rChild.localName ); // DBG
-          if( rChild.attributes.length > 0 || rChild.childNodes.length > 0 ) { 
-            var childNodeRep = {};
-            for( var ra = rChild.attributes.length-1; ra >= 0; --ra ) { 
-              if( rChild.attributes[ra].prefix == bpmn2Prefix ) { 
-                console.log( ": " + rChild.attributes[ra].localName + " [" + rChild.attributes[ra].value + "]" ); // DBG
-                childNodeRep[rChild.attributes[ra].localName] = rChild.attributes[ra].value;
-              }
-            }
-            rNodeRep[rChild.localName] = childNodeRep;
-            if( rChild.childNodes.length > 0 ) { 
-              recursiveAddToNodeRep(rChild, rNodeRep[rChild.localName]);
-            } 
-          } else { 
-            rNodeRep[rChild.localName] = true;
-          }
-        // text
-        } else if( ( rChild.nodeType == 3 || rChild.nodeType == 4 ) && /\S/.test(rChild.data) ) { 
-          rNodeRep["#data"] = rChild.data;
-        }
-      }
-    }
-
-    // Create (Intermediate) Representation: signal
-    var analyzeMessage = function(msgNode, addToDefRep) { 
+    var handleMessage = function(msgNode, addToDefRep) { 
       if( msgNode.nodeType == 1 && msgNode.prefix == bpmn2Prefix ) { 
-        var msgRep = new NodeRepr(msgNode.localName);
+        var msgRep = new NodeRepr(msgNode.localName, msgNode.attributes);
         // attributes of process added as message repr. object fields
         for( var a = msgNode.attributes.length-1; a >= 0; --a ) {  
           var attr = msgNode.attributes[a]; 
@@ -210,9 +126,10 @@ var compiler = {
           }
         }
         // recursively add sub-elements
-        if( msgNode.childNodes.length > 0 ) { 
-          recursiveAddToNodeRep(msgNode, msgRep);
+        if( msgNode.children.length > 0 ) { 
+          
         }
+
         // add to process repr. 
         var typeMap = addToDefRep[elementCategory[msgRep.repType]];
         typeMap[msgRep.id] = msgRep;
@@ -224,16 +141,168 @@ var compiler = {
       }
     }
 
+    var processRootLevelElement = { 
+      "process"        : handleProcess,
+      "message"        : handleMessage,
+      "signal"         : unsupported,
+      "itemDefinition" : unsupported,
+      "error"          : unsupported,
+      "dataStore"      : unsupported,
+      "escalation"     : unsupported,
+      "resource"       : unsupported,
+      "interface"      : unsupported
+    }
+
+    /**
+     * Process level (and sub-level) elements
+     */
+
+    var handleExpression = function( exprNode ) { 
+      var expr = {};
+      var numChildren = exprNode.childNodes.length-1; 
+      compiler.log( "NC: " + numChildren );
+      if( numChildren == 0 ) { 
+        return trimString( exprNode.childNodes[0].data );
+      } else { 
+        while( numChildren >= 0 ) { 
+          if( exprNode.childNodes[numChildren].nodeType == 4 ) {  
+            return trimString( exprNode.childNodes[numChildren].data );
+          }
+        }
+        numChildren--;
+      }
+    }
+
+    var trimString = function( str ) { 
+      var newStr = str.replace( "/^\s*/", "" );
+      newStr = newStr.replace( "/\s*$/", "" );
+      return newStr;
+    }
+
+    var handleSequenceFlow = function(seqNode, addToProcRep) { 
+      var seqRep = new SeqRepr();
+      for( var sa = seqNode.attributes.length-1; sa >= 0; --sa ) { 
+        var attr = seqNode.attributes[sa];
+        switch( attr.localName ) { 
+          case "id": seqRep.id = attr.value;
+            break;
+          case "sourceRef": seqRep.from = attr.value;
+            break;
+          case "targetRef": seqRep.to = attr.value;
+            break;
+        }
+        if( seqNode.children.length != 0 ) { 
+          for( var c = seqNode.children.length-1; c >= 0; --c ) { 
+            var child = seqNode.children[c];
+            if( child.nodeType == 1 && child.nodeName == "conditionExpression" ) { 
+              compiler.log( "CE? " + child.parentNode.attributes[0].nodeValue );
+              seqRep["condition"] = handleExpression( child );
+              break;
+            } 
+          }
+        }
+      }
+
+      if( ! addToProcRep.seq ) { 
+        addToProcRep.seq = [];
+      }
+      addToProcRep.seq.push(seqRep);
+    }
+
+    var handleScratch = function(scratchNode, addToProcRep) { 
+      var stepRep = new NodeRepr(scratchNode.localName);
+      for( var sa = scratchNode.attributes.length-1; sa >= 0; --sa ) { 
+        if( scratchNode.attributes[sa].localName == "id" ) { 
+          stepRep.id = scratchNode.attributes[sa].value;
+        }
+      }
+
+      if( ! addToProcRep.nodes ) { 
+        addToProcRep.nodes = [];
+      }
+      if( stepRep.id ) { 
+        addToProcRep.nodes[stepRep.id] = stepRep;
+      } else { 
+        throw new Error( "Node " + scratchNode.localName + " does not have an id." );
+      }
+
+      return stepRep;
+    }
+
+    var handleEvent = function(eventNode, addToProcRep) {
+      var eventRep = new NodeRepr(eventNode.localName);
+      for( var sa = eventNode.attributes.length-1; sa >= 0; --sa ) { 
+        if( eventNode.attributes[sa].localName == "id" ) { 
+          eventRep.id = eventNode.attributes[sa].value;
+        }
+      }
+
+      if( ! addToProcRep.nodes ) { 
+        addToProcRep.nodes = [];
+      }
+      if( eventRep.id ) { 
+        addToProcRep.nodes[eventRep.id] = eventRep;
+      } else { 
+        throw new Error( "Node " + eventNode.localName + " does not have an id." );
+      }
+
+      return eventRep;
+    }
+
+    var processProcessElement = { 
+      sequenceFlow: handleSequenceFlow,    //  X
+
+      subProcess: handleScratch,           // ?
+      adHocSubProcess: unsupported,        //
+      transaction: unsupported,            //
+      
+      callActivity: unsupported,           //
+
+      // task
+      task: handleScratch,                 // ?
+      businessRuleTask: unsupported,       //
+      manualTask: unsupported,             //
+      receiveTask: unsupported,            //
+      scriptTask: handleScratch,           // ?
+      sendTask: unsupported,               //
+      serviceTask: unsupported,            //
+      userTask: handleScratch,             // ?
+
+      // gateway
+      complexGateway: unsupported,         //
+      eventBasedGateway: unsupported,      //
+      exclusiveGateway: handleScratch,     // ?
+      inclusiveGateway: handleScratch,     // ?
+      parallelGateway: unsupported,        //
+
+      // event
+      startEvent: handleScratch,           // ?
+      endEvent: handleScratch,             // ?
+      implicitThrowEvent: unsupported,     //
+      intermediateCatchEvent: unsupported, //
+      intermediateThrowEvent: unsupported, //
+      boundaryEvent: unsupported,          //
+      event: unsupported,                  //
+      
+      // extra
+      dataObject: unsupported,
+      property: unsupported,
+      dataObjectReference: unsupported,
+      dataStoreReference: unsupported,
+     
+      callChoreography: unsupported,
+      subChoreography: unsupported,
+      choreographyTask: unsupported,
+
+      // signal
+      signal: unsupported,
+      message: unsupported,
+    };
+
     // Create (Intermediate) Representation: MAIN
 
-    var defNode = findDefinition(xmlDoc);
-    
-    // (prepare the process representation object)
-    var newDefRep = {};
-    newDefRep.seq = [];
-    newDefRep.attr = [];
-  
-    analyzeDefinition(defNode, newDefRep);
+    var defNode = findDefinition(xmlDoc, schema);
+    var newDefRep = handleDefinition(defNode);
 
     // return process instance (array)
     return newDefRep;
@@ -257,13 +326,13 @@ var compiler = {
     };
 
     var addToEndAndBegMap = function(newNode, graphRep) {
-      // console.log( "  | " + newNode.beg + " > " + newNode.end + " [" + endMap[newNode.end] + ", " + begMap[newNode.beg] + "]" ); // DBG
+      // this.log( "  | " + newNode.beg + " > " + newNode.end + " [" + endMap[newNode.end] + ", " + begMap[newNode.beg] + "]" ); // DBG
 
       // Add to ENDS
       if( ! endMap[newNode.end] ) { 
         endMap[newNode.end] = [newNode];
       } else { 
-        console.log( " *E " + newNode.end + " < " + newNode.beg ); // DBG
+        this.log( " *E " + newNode.end + " < " + newNode.beg ); // DBG
         newNode.preMerge = true;
         var ends = endMap[newNode.end];
         if( ends.length == 1 ) { 
@@ -277,7 +346,7 @@ var compiler = {
       for( var s = graphRep.start.length-1; s >= 0; --s ) { 
         var startNode = graphRep.start[s];
         if( startNode.beg == newNode.end ) { 
-          console.log( "r (" + newNode.beg + " >) " + startNode.beg + " > " + startNode.end ); // DBG
+          this.log( "r (" + newNode.beg + " >) " + startNode.beg + " > " + startNode.end ); // DBG
           nextMap[newNode.end].push(startNode);
         } else { 
           newStart.push(startNode);
@@ -292,7 +361,7 @@ var compiler = {
         begMap[newNode.beg] = [newNode];
       } 
       else { 
-        console.log( " *B " + newNode.beg + " > " + newNode.end ); // DBG
+        this.log( " *B " + newNode.beg + " > " + newNode.end ); // DBG
         newNode.postFork = true;
         var begs = begMap[newNode.beg];
         if( begs.length == 1 ) { 
@@ -308,7 +377,7 @@ var compiler = {
 
       // add to end
       if( endMap[seq.sourceRef] ) { 
-        console.log( "< (" + endMap[seq.sourceRef][0].beg + " >) " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
+        this.log( "< (" + endMap[seq.sourceRef][0].beg + " >) " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
         if( ! nextMap[seq.targetRef] ) { 
           nextMap[seq.targetRef] = [];
         }
@@ -327,7 +396,7 @@ var compiler = {
 
         // insert before begin
         if( seq.targetRef == begin.beg ) { 
-          console.log( "> " + seq.sourceRef + " -> " + seq.targetRef + " (> " + begin.end + ")" ); // DBG
+          this.log( "> " + seq.sourceRef + " -> " + seq.targetRef + " (> " + begin.end + ")" ); // DBG
           if( ! nextMap[seq.targetRef] ) { 
             nextMap[seq.targetRef] = [];
           }
@@ -344,7 +413,7 @@ var compiler = {
 
       // neither beg or end linked anywhere
       if( ! newNode ) {
-        console.log( "! " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
+        this.log( "! " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
         if( ! nextMap[seq.targetRef] ) { 
           nextMap[seq.targetRef] = [];
         }
@@ -363,7 +432,7 @@ var compiler = {
       if( ! endMap[graph.start[s].beg] ) { 
         newStart.push( graph.start[s] );
       } else { 
-        console.log( "X " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
+        this.log( "X " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
       }
     }
     if( newStart.length != graph.start ) { 
