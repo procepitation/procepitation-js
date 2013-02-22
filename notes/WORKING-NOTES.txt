@@ -1,0 +1,17 @@
+
+- was working on compiler. parsing. 
+  + handleExpression goes into an endless loop if we change a
+      var numChildren = exprNode.childNodes.length-1; 
+    to
+      var numChildren = exprNode.childNodes.length; 
+
+ Fix this!
+
+- and then continue working on getting all the representation tests to work
+  . in particular that the condition expressions -- of all sorts -- can be
+    parsed and added to the rep. 
+  . decide what to do with: 
+    - xpath
+    - tFormalExpression
+    - bpmn2: prefix
+    - .. etc. 

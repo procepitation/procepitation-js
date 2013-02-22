@@ -1,0 +1,19 @@
+
+  | if( process ) { 
+  |   do attributes( node, prefix, rep.attr );
+  |   go through child nodes, adding them to type map
+  | }
+  | if element { 
+  |   if( attributes ) { 
+  |     if( process ) { 
+  |       analyzeProcess() 
+  |     } else { 
+  |       add attributes( node, prefix, rep);
+  |       go through child nodes, adding them to REP
+  |     }
+  |   } else { 
+  |     add to parentrep[nodeRep]
+  |   }
+  | }
+
+

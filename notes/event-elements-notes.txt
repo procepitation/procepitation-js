@@ -1,0 +1,16 @@
+<xsd:element ref="dataOutput" minOccurs="0" maxOccurs="unbounded"/>
+<xsd:element ref="dataOutputAssociation" minOccurs="0" maxOccurs="unbounded"/>
+<xsd:element ref="outputSet" minOccurs="0" maxOccurs="1"/>
+
+<xsd:element ref="dataInput" minOccurs="0" maxOccurs="unbounded"/>
+<xsd:element ref="dataInputAssociation" minOccurs="0" maxOccurs="unbounded"/>
+<xsd:element ref="inputSet" minOccurs="0" maxOccurs="1"/>
+
+<xsd:element ref="eventDefinition" minOccurs="0" maxOccurs="unbounded"/>
+<xsd:element name="eventDefinitionRef" type="xsd:QName" minOccurs="0" maxOccurs="unbounded"/>
+
+<xsd:attribute name="waitForCompletion" type="xsd:boolean"/>
+<xsd:attribute name="activityRef" type="xsd:QName"/>
+
+<xsd:element ref="eventDefinition" minOccurs="0" maxOccurs="unbounded"/>
+<xsd:element name="eventDefinitionRef" type="xsd:QName" minOccurs="0" maxOccurs="unbounded"/>
