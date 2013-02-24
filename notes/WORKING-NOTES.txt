@@ -1,15 +1,12 @@
 
-- was working on compiler. parsing. 
-  + handleExpression goes into an endless loop if we change a
-      var numChildren = exprNode.childNodes.length-1; 
-    to
-      var numChildren = exprNode.childNodes.length; 
+- was working on adding subprocess seqflow tests 
+  - pmn/subprocess/SubProcessTest.testDoubleNestedSimpleSubProcess.bpmn20.xml");
+- was working on adding subprocess seqflow parsing 
 
- Fix this!
 
-- and then continue working on getting all the representation tests to work
-  . in particular that the condition expressions -- of all sorts -- can be
-    parsed and added to the rep. 
+- Next: 
+  . in particular that the condition expressions, of all sorts,
+    can be parsed and added to the rep. 
   . decide what to do with: 
     - xpath
     - tFormalExpression

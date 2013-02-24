@@ -1,17 +1,15 @@
+
+<!-- element/text: normal -->
 <bpmn2:conditionExpression>${confirmed}</bpmn2:conditionExpression>
-
 <conditionExpression>${confirmed}</conditionExpression>
+<conditionExpression xsi:type="tFormalExpression">${input == 1}</conditionExpression>
 			
-<conditionExpression><![CDATA[${confirmed}]]></conditionExpression>
-
+<!-- CDATA -->
+<bpmn2:conditionExpression ><![CDATA[$startMessage[@subject = 'foobar']]]></bpmn2:conditionExpression>
 <conditionExpression><![CDATA[${count > 1000}]]></conditionExpression>
-
 <conditionExpression xsi:type="tFormalExpression"><![CDATA[${done}]]></conditionExpression>
 
-<conditionExpression xsi:type="tFormalExpression">${input == 1}</conditionExpression>
-    
+<!-- element/text: xpath -->
 <conditionExpression xsi:type="tFormalExpression" language="http://www.w3.org/1999/XPath" >x//@value = 'a'</conditionExpression>
-
 <conditionExpression xsi:type="tFormalExpression" language="http://www.w3.org/1999/XPath" >bpmn2:getVariable("x")//@value = 'a'</conditionExpression>
     
-<bpmn2:conditionExpression ><![CDATA[$startMessage[@subject = 'foobar']]]></bpmn2:conditionExpression>

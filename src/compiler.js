@@ -1,10 +1,20 @@
 
 var compiler = { 
 
+  logI : 0,
   log : function(logMsg) { 
     console.log( (compiler.logI++) + " " + logMsg );
   },
-  logI : 0,
+
+  debugData: {},
+  debugCheck: function( obj ) { 
+    if( obj ) { 
+      if( compiler.debugData.last === obj ) { 
+        throw new Error( "Already checked " + obj.nodeName + "!" );
+      }
+    }
+    compiler.debugData.last = obj;
+  },
 
   createRep: function(xmlDoc) {
  
@@ -100,6 +110,7 @@ var compiler = {
         var attr = procNode.attributes[a];
         procRep.attr[attr.localName] = attr.value;
       } 
+      procRep.nodes = [];
 
       for( var n = procNode.children.length-1; n >= 0; --n ) {
         var child = procNode.children[n];
@@ -158,9 +169,10 @@ var compiler = {
      */
 
     var handleExpression = function( exprNode ) { 
+      var name = exprNode.attributes[0].nodeValue;
       var expr = {};
       var numChildren = exprNode.childNodes.length-1; 
-      compiler.log( "NC: " + numChildren );
+      compiler.debugCheck( exprNode ); 
       if( numChildren == 0 ) { 
         return trimString( exprNode.childNodes[0].data );
       } else { 
@@ -168,8 +180,8 @@ var compiler = {
           if( exprNode.childNodes[numChildren].nodeType == 4 ) {  
             return trimString( exprNode.childNodes[numChildren].data );
           }
+          numChildren--;
         }
-        numChildren--;
       }
     }
 
@@ -181,6 +193,8 @@ var compiler = {
 
     var handleSequenceFlow = function(seqNode, addToProcRep) { 
       var seqRep = new SeqRepr();
+
+      // attributes
       for( var sa = seqNode.attributes.length-1; sa >= 0; --sa ) { 
         var attr = seqNode.attributes[sa];
         switch( attr.localName ) { 
@@ -191,15 +205,16 @@ var compiler = {
           case "targetRef": seqRep.to = attr.value;
             break;
         }
-        if( seqNode.children.length != 0 ) { 
-          for( var c = seqNode.children.length-1; c >= 0; --c ) { 
-            var child = seqNode.children[c];
-            if( child.nodeType == 1 && child.nodeName == "conditionExpression" ) { 
-              compiler.log( "CE? " + child.parentNode.attributes[0].nodeValue );
-              seqRep["condition"] = handleExpression( child );
-              break;
-            } 
-          }
+      }
+
+      // expressions
+      if( seqNode.children.length != 0 ) { 
+        for( var c = seqNode.children.length-1; c >= 0; --c ) { 
+          var child = seqNode.children[c];
+          if( child.nodeType == 1 && child.nodeName == "conditionExpression" ) { 
+            seqRep["condition"] = handleExpression( child );
+            break;
+          } 
         }
       }
 
@@ -207,6 +222,42 @@ var compiler = {
         addToProcRep.seq = [];
       }
       addToProcRep.seq.push(seqRep);
+    }
+
+    var handleSubProcess = function(subProcessNode, parentNode) { 
+      var stepRep = new NodeRepr(scratchNode.localName);
+      for( var sa = scratchNode.attributes.length-1; sa >= 0; --sa ) { 
+        if( scratchNode.attributes[sa].localName == "id" ) { 
+          stepRep.id = scratchNode.attributes[sa].value;
+        }
+      }
+
+      stepRep.nodes = [];
+      if( stepRep.id ) { 
+        parentRep.nodes[stepRep.id] = stepRep;
+      } else { 
+        throw new Error( "Node " + stepRep.localName + " is missing an id field." );
+      }
+
+      return stepRep;
+    }
+
+    // UNFINISHED
+    var handleEvent = function(eventNode, addToProcRep) {
+      var eventRep = new NodeRepr(eventNode.localName);
+      for( var sa = eventNode.attributes.length-1; sa >= 0; --sa ) { 
+        if( eventNode.attributes[sa].localName == "id" ) { 
+          eventRep.id = eventNode.attributes[sa].value;
+        }
+      }
+
+      if( eventRep.id ) { 
+        parentRep.nodes[childRep.id] = childRep;
+      } else { 
+        throw new Error( "Node " + childRep.localName + " is missing an id field." );
+      }
+
+      return eventRep;
     }
 
     var handleScratch = function(scratchNode, addToProcRep) { 
@@ -217,9 +268,6 @@ var compiler = {
         }
       }
 
-      if( ! addToProcRep.nodes ) { 
-        addToProcRep.nodes = [];
-      }
       if( stepRep.id ) { 
         addToProcRep.nodes[stepRep.id] = stepRep;
       } else { 
@@ -227,26 +275,6 @@ var compiler = {
       }
 
       return stepRep;
-    }
-
-    var handleEvent = function(eventNode, addToProcRep) {
-      var eventRep = new NodeRepr(eventNode.localName);
-      for( var sa = eventNode.attributes.length-1; sa >= 0; --sa ) { 
-        if( eventNode.attributes[sa].localName == "id" ) { 
-          eventRep.id = eventNode.attributes[sa].value;
-        }
-      }
-
-      if( ! addToProcRep.nodes ) { 
-        addToProcRep.nodes = [];
-      }
-      if( eventRep.id ) { 
-        addToProcRep.nodes[eventRep.id] = eventRep;
-      } else { 
-        throw new Error( "Node " + eventNode.localName + " does not have an id." );
-      }
-
-      return eventRep;
     }
 
     var processProcessElement = { 
@@ -326,13 +354,13 @@ var compiler = {
     };
 
     var addToEndAndBegMap = function(newNode, graphRep) {
-      // this.log( "  | " + newNode.beg + " > " + newNode.end + " [" + endMap[newNode.end] + ", " + begMap[newNode.beg] + "]" ); // DBG
+      // compiler.log( "  | " + newNode.beg + " > " + newNode.end + " [" + endMap[newNode.end] + ", " + begMap[newNode.beg] + "]" ); // DBG
 
       // Add to ENDS
       if( ! endMap[newNode.end] ) { 
         endMap[newNode.end] = [newNode];
       } else { 
-        this.log( " *E " + newNode.end + " < " + newNode.beg ); // DBG
+        compiler.log( " *E " + newNode.end + " < " + newNode.beg ); // DBG
         newNode.preMerge = true;
         var ends = endMap[newNode.end];
         if( ends.length == 1 ) { 
@@ -346,7 +374,7 @@ var compiler = {
       for( var s = graphRep.start.length-1; s >= 0; --s ) { 
         var startNode = graphRep.start[s];
         if( startNode.beg == newNode.end ) { 
-          this.log( "r (" + newNode.beg + " >) " + startNode.beg + " > " + startNode.end ); // DBG
+          compiler.log( "r (" + newNode.beg + " >) " + startNode.beg + " > " + startNode.end ); // DBG
           nextMap[newNode.end].push(startNode);
         } else { 
           newStart.push(startNode);
@@ -361,7 +389,7 @@ var compiler = {
         begMap[newNode.beg] = [newNode];
       } 
       else { 
-        this.log( " *B " + newNode.beg + " > " + newNode.end ); // DBG
+        compiler.log( " *B " + newNode.beg + " > " + newNode.end ); // DBG
         newNode.postFork = true;
         var begs = begMap[newNode.beg];
         if( begs.length == 1 ) { 
@@ -377,7 +405,7 @@ var compiler = {
 
       // add to end
       if( endMap[seq.sourceRef] ) { 
-        this.log( "< (" + endMap[seq.sourceRef][0].beg + " >) " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
+        compiler.log( "< (" + endMap[seq.sourceRef][0].beg + " >) " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
         if( ! nextMap[seq.targetRef] ) { 
           nextMap[seq.targetRef] = [];
         }
@@ -396,7 +424,7 @@ var compiler = {
 
         // insert before begin
         if( seq.targetRef == begin.beg ) { 
-          this.log( "> " + seq.sourceRef + " -> " + seq.targetRef + " (> " + begin.end + ")" ); // DBG
+          compiler.log( "> " + seq.sourceRef + " -> " + seq.targetRef + " (> " + begin.end + ")" ); // DBG
           if( ! nextMap[seq.targetRef] ) { 
             nextMap[seq.targetRef] = [];
           }
@@ -413,7 +441,7 @@ var compiler = {
 
       // neither beg or end linked anywhere
       if( ! newNode ) {
-        this.log( "! " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
+        compiler.log( "! " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
         if( ! nextMap[seq.targetRef] ) { 
           nextMap[seq.targetRef] = [];
         }
@@ -432,7 +460,7 @@ var compiler = {
       if( ! endMap[graph.start[s].beg] ) { 
         newStart.push( graph.start[s] );
       } else { 
-        this.log( "X " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
+        compiler.log( "X " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
       }
     }
     if( newStart.length != graph.start ) { 
