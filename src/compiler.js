@@ -26,7 +26,7 @@ var compiler = {
       this.repType = type;
       // Functional object in candy string 
       // Should contain runtime executable logic
-      this.run = function(context) { 
+      this.closure = function(context) { 
       }
     };
     NodeRepr.prototype = new Object();
@@ -97,7 +97,22 @@ var compiler = {
       }
       return createdDefRep;
     }
-  
+ 
+    var handleProcessChildren = function(procTypeNode, procTypeRep) { 
+      procTypeRep.nodes = {};
+      for( var n = procTypeNode.children.length-1; n >= 0; --n ) {
+        var child = procTypeNode.children[n];
+        if( child.nodeType == 1 && child.prefix == bpmn2Prefix ) { 
+          if( processProcessElement[child.localName] ) { 
+            processProcessElement[child.localName](child, procTypeRep); 
+          } else { 
+            throw new UnsupError("'" + child.localName + "' elements in a process");
+          }
+        } 
+      }
+
+    }
+
     var handleProcess = function(procNode, addToDefRep) { 
       if( ! addToDefRep.process ) { 
         addToDefRep.process = [];
@@ -110,23 +125,13 @@ var compiler = {
         var attr = procNode.attributes[a];
         procRep.attr[attr.localName] = attr.value;
       } 
-      procRep.nodes = [];
 
-      for( var n = procNode.children.length-1; n >= 0; --n ) {
-        var child = procNode.children[n];
-        if( child.nodeType == 1 && child.prefix == bpmn2Prefix ) { 
-          if( processProcessElement[child.localName] ) { 
-            processProcessElement[child.localName](child, procRep); 
-          } else { 
-            throw new UnsupError("'" + child.localName + "' elements in a process");
-          }
-        } 
-      }
-
+      handleProcessChildren(procNode, procRep);
     }
 
     var handleMessage = function(msgNode, addToDefRep) { 
       if( msgNode.nodeType == 1 && msgNode.prefix == bpmn2Prefix ) { 
+        // FIXME
         var msgRep = new NodeRepr(msgNode.localName, msgNode.attributes);
         // attributes of process added as message repr. object fields
         for( var a = msgNode.attributes.length-1; a >= 0; --a ) {  
@@ -224,22 +229,27 @@ var compiler = {
       addToProcRep.seq.push(seqRep);
     }
 
-    var handleSubProcess = function(subProcessNode, parentNode) { 
-      var stepRep = new NodeRepr(scratchNode.localName);
-      for( var sa = scratchNode.attributes.length-1; sa >= 0; --sa ) { 
-        if( scratchNode.attributes[sa].localName == "id" ) { 
-          stepRep.id = scratchNode.attributes[sa].value;
+    var handleSubProcess = function(subProcessNode, parentRep) { 
+      var subProcRep = new NodeRepr(subProcessNode.localName);
+      var attrs = {};
+      for( var sa = subProcessNode.attributes.length-1; sa >= 0; --sa ) { 
+        var attr = subProcessNode.attributes[sa];
+        if( attr.localName == "id" ) { 
+          subProcRep.id = attr.value;
+        } else { 
+          attrs[attr.localName] = attr.value;
         }
       }
 
-      stepRep.nodes = [];
-      if( stepRep.id ) { 
-        parentRep.nodes[stepRep.id] = stepRep;
+      if( subProcRep.id ) { 
+        parentRep.nodes[subProcRep.id] = subProcRep;
       } else { 
-        throw new Error( "Node " + stepRep.localName + " is missing an id field." );
+        throw new Error( "Node " + subProcRep.localName + " is missing an id field." );
       }
 
-      return stepRep;
+      handleProcessChildren(subProcessNode, subProcRep);
+
+      return subProcRep;
     }
 
     // UNFINISHED
@@ -278,9 +288,9 @@ var compiler = {
     }
 
     var processProcessElement = { 
-      sequenceFlow: handleSequenceFlow,    //  X
+      sequenceFlow: handleSequenceFlow,    // X
 
-      subProcess: handleScratch,           // ?
+      subProcess: handleSubProcess,        // X
       adHocSubProcess: unsupported,        //
       transaction: unsupported,            //
       
