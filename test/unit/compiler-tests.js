@@ -7,66 +7,48 @@ test( "Start to End: basic test", function() {
   var procRep = (compiler.createRep(xmlDoc)).process[0];
   
   notEqual( procRep, null, "non-null process representation" );
-  var x = 1; equal( procRep.seq.length, x, procRep.seq.length + " ? x seqence");
+  equal( procRep.seq.length, 1, "all sequences should be stored" );
   var l = 0; for( i in procRep.nodes ) { ++l; }
-  x = 2; equal( l, x, l + " ? x nodes")
+  equal( l, 2, "all nodes should be stored" );
 });
 
 test( "Inclusive Gateway: condition diverging test", function() {
+  expect(4);
+  
   var xmlDoc = loadAndParse("bpmn/gateway/InclusiveGatewayTest.testDivergingInclusiveGateway.bpmn20.xml");
   var procRep = compiler.createRep(xmlDoc).process[0];
   
   notEqual( procRep, null, "non-null process representation" );
-  var x = 7; equal( procRep.seq.length, x, procRep.seq.length + " ? " + x + " seqence");
-  x = 0;
+  equal( procRep.seq.length, 7, "all sequences should be stored" );
+  var l = 0; for( i in procRep.nodes ) { ++l; }
+  equal( l, 6, l + "all nodes should be stored" );
+  
+  var x = 0;
   for( var i = 0; i < procRep.seq.length; ++i ) { 
     if( procRep.seq[i]["condition"] && /\S/.test(procRep.seq[i]["condition"])  ) { 
       ++x;
     }
   }
-  equal( x, 3, "sequence flow condition expression not filled for all 3 conditions");
-  var l = 0; for( i in procRep.nodes ) { ++l; }
-  x = 6; equal( l, x, l + " ? " + x + " nodes")
+  equal( x, 3, "sequence flow condition expression not filled for all conditions");
 });
 
 test( "Double Nested SubProcess: basic test", function() {
+  expect(4);
+  
   var xmlDoc = loadAndParse("bpmn/subprocess/SubProcessTest.testDoubleNestedSimpleSubProcess.bpmn20.xml");
   var procRep = compiler.createRep(xmlDoc).process[0];
   
-  ok( procRep != null, "non-null process representation" );
-});
-
-test( "Inclusive Gateway: representation: loop test", function() {
-  var xmlDoc = loadAndParse("bpmn/gateway/InclusiveGatewayTest.testLoop.bpmn20.xml");
-  var procRep = compiler.createRep(xmlDoc).process[0];
-  
-  ok( procRep != null, "non-null process representation" );
-  var x = 10; ok( procRep.seq.length == x, procRep.seq.length + " ? x seqence");
-  var l = 0; for( i in procRep.nodes ) { ++l; }
-  x = 8; ok( l == x, l + " ? " + x + " nodes")
-  
-  var inst = compiler.compileInstance(procRep);
-  
-  ok( inst != null, "non-null process instance" );
-  ok( inst.start, "non-nuill start node array" );
-  ok( inst.start.length == 3, inst.start.length + " ? 3 start nodes");
-  var x = ""; var startName = "theStart";
-  for( var i = 0; i < inst.start.length; ++i ) {
-    if( inst.start[i].beg != startName ) { 
-      x = i;
-    }
-  }
-  var badStart = startName;
-  if( x != "" ) { 
-    badStart = inst.start[x].beg; 
-  }
-  ok( x == "", "Start node [" + x + "] is not '" + startName + "' [" + badStart + "]" );
- 
-  var endName = "theEnd"
-  ok( helper.postForkAndPreMergeTest(inst, endName ), "Recursive postFork, preMerge and 'End' test" );
+  notEqual( procRep, null, "non-null process representation" );
+  var first = procRep.nodes["firstSubProcess"];
+  notEqual( first.seq, null, "seq field present for subprocess" );
+  var second = first.nodes["secondSubProcess"];
+  notEqual( second.seq, null, "seq field present for nested subprocess" );
+  var third = second.nodes["thirdSubProcess"];
+  notEqual( third.seq, null, "seq field present for doubly nested subprocess" );
 });
 
 module("[Instance]");
+
 
 test( "Minimal Process: basic test", function() {
   expect(9);
@@ -110,6 +92,36 @@ test( "Minimal Process: backwards test", function() {
   ok( inst.start[0].beg == "_1", "correct start node" );
   ok( inst.start[0].next, "node stairway exists." );
   ok( inst.start[0].end == inst.start[0].next[0].beg, "correct link between 2 nodes" );
+});
+
+test( "Inclusive Gateway: representation: loop test", function() {
+  var xmlDoc = loadAndParse("bpmn/gateway/InclusiveGatewayTest.testLoop.bpmn20.xml");
+  var procRep = compiler.createRep(xmlDoc).process[0];
+  
+  notEqual( procRep, null, "non-null process representation" );
+  var x = 10; equal( procRep.seq.length, x, "all sequences should be stored" );
+  var l = 0; for( i in procRep.nodes ) { ++l; }
+  x = 8; equal( l, x, "all nodes should be stored" );
+  
+  var inst = compiler.compileInstance(procRep);
+  
+  notEqual( inst, null, "non-null process instance" );
+  notEqual( inst.start, null, "non-nuill start node array" );
+  equal( inst.start.length, 3, "there should be 3 start nodes" );
+  var x = ""; var startName = "theStart";
+  for( var i = 0; i < inst.start.length; ++i ) {
+    if( inst.start[i].beg != startName ) { 
+      x = i;
+    }
+  }
+  var badStart = startName;
+  if( x != "" ) { 
+    badStart = inst.start[x].beg; 
+  }
+  equal( x, "", "Start node [" + x + "] should be '" + startName + "' [not " + badStart + "]" );
+ 
+  var endName = "theEnd"
+  ok( helper.postForkAndPreMergeTest(inst, endName ), "Recursive postFork, preMerge and 'End' test" );
 });
 
 test( "Nested Fork/Join: test", function() {

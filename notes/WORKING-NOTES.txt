@@ -1,10 +1,7 @@
 
-- was working on adding subprocess seqflow tests 
-  - pmn/subprocess/SubProcessTest.testDoubleNestedSimpleSubProcess.bpmn20.xml");
-- was working on adding subprocess seqflow parsing 
+- working on basic instance compilation -- and running the process!
 
-
-- Next: 
+- Still todo: 
   . in particular that the condition expressions, of all sorts,
     can be parsed and added to the rep. 
   . decide what to do with: 
