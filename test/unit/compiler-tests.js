@@ -49,29 +49,32 @@ test( "Double Nested SubProcess: basic test", function() {
 
 module("[Instance]");
 
-
 test( "Minimal Process: basic test", function() {
-  expect(9);
+  expect(10);
 
   var bpmn2File = "bpmn/MinimalProcess.bpmn20.xml";
     
   var xmlDoc = loadAndParse(bpmn2File);
   var procRep = compiler.createRep(xmlDoc).process[0];
-  
+ 
+  // 5 tests
   notEqual( procRep, null, "non-null process representation" );
-  var x = 2; equal( procRep.seq.length, x, procRep.seq.length + " ? x seqence");
+  equal( procRep.seq.length, 2, "testing procRep.seq array length" );
   var l = 0; for( i in procRep.nodes ) { ++l; }
-  x = 3; equal( l, x, l + " ? " + x + " nodes")
+  equal( l, 3, "testing number of elements in procRep.nodes" );
   var e = "terminateEventDefinition"
-  ok( procRep.nodes["_3"][e], e + " exists");
+  notEqual( procRep.nodes["_3"].events, null, ".events array exists in end node rep");
+  ok( procRep.nodes["_3"].events[0] != null && procRep.nodes["_3"].events[0].type == "terminate", 
+      "terminate event definition added to end node" );
  
   var inst = compiler.compileInstance(procRep);
   
-  ok( inst != null, "non-null process instance" );
-  ok( inst.start, "non-nuill start node array" );
-  ok( inst.start[0].beg == "_1", "correct start node" );
-  ok( inst.start[0].next, "node stairway started." );
-  ok( inst.start[0].end == inst.start[0].next[0].beg, "correct link between 2 nodes" );
+  // 5 tests
+  notEqual( inst, null, "non-null process instance" );
+  notEqual( inst.start, null, "non-null start node array" );
+  equal( inst.start[0].beg,  "_1", "correct start node" );
+  notEqual( inst.start[0].next, null, "node stairway started." );
+  equal( inst.start[0].end, inst.start[0].next[0].beg, "correct link between 2 nodes" );
 });
 
 test( "Minimal Process: backwards test", function() {
@@ -101,7 +104,7 @@ test( "Inclusive Gateway: representation: loop test", function() {
   notEqual( procRep, null, "non-null process representation" );
   var x = 10; equal( procRep.seq.length, x, "all sequences should be stored" );
   var l = 0; for( i in procRep.nodes ) { ++l; }
-  x = 8; equal( l, x, "all nodes should be stored" );
+  equal( l, 8, "number of elements in procRep.nodes" );
   
   var inst = compiler.compileInstance(procRep);
   
@@ -130,10 +133,10 @@ test( "Nested Fork/Join: test", function() {
   var xmlDoc = loadAndParse(bpmn2File);
   var procRep = compiler.createRep(xmlDoc).process[0];
   
-  ok( procRep != null, "non-null process representation" );
-  var x = 13; ok( procRep.seq.length == x, procRep.seq.length + " ? x seqence");
-  var l = 0; for( i in procRep.step ) { ++l; }
-  x = 12; ok( l == x, l + " ? " + x + " steps")
+  notEqual( procRep, null, "non-null process representation" );
+  equal( procRep.seq.length, 13, "testing procRep.seq array length" );
+  var l = 0; for( i in procRep.nodes ) { ++l; }
+  equal( l, 12, "number of elements in procRep.nodes" );
   
   var inst = compiler.compileInstance(procRep);
   

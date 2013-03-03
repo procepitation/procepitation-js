@@ -1,5 +1,31 @@
 
-- working on basic instance compilation -- and running the process!
+- working on and running the processes!
+
+- left over: 
+  - clean up tests (equal, notEqual instead of ok, etc. )
+  - make sure testing is more extensive and covers everything.. 
+    - current tests  don't have all of the tests they should have
+    - gateways
+    - end events: terminate, etc. 
+      -> "event bus" mechanism necessary to communicate
+
+engine: 
+  while( running ) { 
+    candyString[i].execute(context) { 
+      if( terminate ) { 
+         // modify context to reflect that
+      }
+
+      if( context.terminate )  {
+        // stop, signal stops
+      }
+
+looked into vert.x event bus
+- read async javascript for info on single-threaded/browser/worker model
+
+  - compileInstance() doesn't insert the closures yet? 
+    - just does the graph compilation
+    - need to do candy string compilation
 
 - Still todo: 
   . in particular that the condition expressions, of all sorts,

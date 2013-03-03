@@ -213,14 +213,12 @@ var compiler = {
       }
 
       // expressions
-      if( seqNode.children.length != 0 ) { 
-        for( var c = seqNode.children.length-1; c >= 0; --c ) { 
-          var child = seqNode.children[c];
-          if( child.nodeType == 1 && child.nodeName == "conditionExpression" ) { 
-            seqRep["condition"] = handleExpression( child );
-            break;
-          } 
-        }
+      for( var c = seqNode.children.length-1; c >= 0; --c ) { 
+        var child = seqNode.children[c];
+        if( child.nodeType == 1 && child.nodeName == "conditionExpression" ) { 
+          seqRep["condition"] = handleExpression( child );
+          break;
+        } 
       }
 
       if( ! addToProcRep.seq ) { 
@@ -252,12 +250,70 @@ var compiler = {
       return subProcRep;
     }
 
+    var handleEndEvent = function(endEventNode, endParentRep) {
+      var endRep = new NodeRepr(endEventNode.localName);
+      for( var ea = endEventNode.attributes.length-1; ea >= 0; --ea ) { 
+        if( endEventNode.attributes[ea].localName == "id" ) { 
+          endRep.id = endEventNode.attributes[ea].value;
+        }
+      }
+
+      if( endEventNode.children.length > 0 ) { 
+        endRep.events = [];
+      }
+      for( var ec = endEventNode.children.length-1; ec >= 0; --ec ) { 
+          var child = endEventNode.children[ec];
+          switch( child.nodeName ) { 
+            case "terminateEventDefinition": 
+              endRep.events.push( {
+                "type" : "terminate" 
+              });
+              break;
+            case "incoming":
+            case "outgoing":
+              break;
+            default: 
+              throw new UnsupError( child.nodeName + " events in an End Event" );
+          }
+      }
+
+      if( endRep.id ) { 
+        endParentRep.nodes[endRep.id] = endRep;
+      } else { 
+        throw new Error( "Node " + endRep.localName + " is missing an id field." );
+      }
+
+      return endRep;
+    }
+
+    var handleGateway = function(gatewayNode, gatewayParentRep) { 
+      var gatewayRep = new NodeRepr(gatewayNode.localName);
+      for( var sa = gatewayNode.attributes.length-1; sa >= 0; --sa ) { 
+        switch( gatewayNode.attributes[sa].localName ) { 
+          case "id": 
+            gatewayRep.id = gatewayNode.attributes[sa].value;
+            break;
+          case "gatewayDirection": 
+            gatewayRep["direction"] = gatewayNode.attributes[sa].value;
+            break;
+        }
+      }
+
+      if( gatewayRep.id ) { 
+        gatewayParentRep.nodes[gatewayRep.id] = gatewayRep;
+      } else { 
+        throw new Error( "Node " + gatewayNode.localName + " does not have an id." );
+      }
+
+      return gatewayRep;
+    }
+
     // UNFINISHED
     var handleEvent = function(eventNode, addToProcRep) {
       var eventRep = new NodeRepr(eventNode.localName);
-      for( var sa = eventNode.attributes.length-1; sa >= 0; --sa ) { 
-        if( eventNode.attributes[sa].localName == "id" ) { 
-          eventRep.id = eventNode.attributes[sa].value;
+      for( var ea = eventNode.attributes.length-1; ea >= 0; --ea ) { 
+        if( eventNode.attributes[ea].localName == "id" ) { 
+          eventRep.id = eventNode.attributes[ea].value;
         }
       }
 
@@ -288,53 +344,53 @@ var compiler = {
     }
 
     var processProcessElement = { 
-      sequenceFlow: handleSequenceFlow,    // X
+      sequenceFlow: handleSequenceFlow,        // X
 
-      subProcess: handleSubProcess,        // X
-      adHocSubProcess: unsupported,        //
-      transaction: unsupported,            //
+      subProcess: handleSubProcess,            // X
+      adHocSubProcess: unsupported,            //
+      transaction: unsupported,                //
       
-      callActivity: unsupported,           //
+      callActivity: unsupported,               //
 
       // task
-      task: handleScratch,                 // ?
-      businessRuleTask: unsupported,       //
-      manualTask: unsupported,             //
-      receiveTask: unsupported,            //
-      scriptTask: handleScratch,           // ?
-      sendTask: unsupported,               //
-      serviceTask: unsupported,            //
-      userTask: handleScratch,             // ?
+      task: handleScratch,                     // ?
+      businessRuleTask: unsupported,           //
+      manualTask: unsupported,                 //
+      receiveTask: unsupported,                //
+      scriptTask: handleScratch,               // ?
+      sendTask: unsupported,                   //
+      serviceTask: unsupported,                //
+      userTask: handleScratch,                 // ?
 
       // gateway
-      complexGateway: unsupported,         //
-      eventBasedGateway: unsupported,      //
-      exclusiveGateway: handleScratch,     // ?
-      inclusiveGateway: handleScratch,     // ?
-      parallelGateway: unsupported,        //
+      complexGateway: unsupported,             //
+      eventBasedGateway: unsupported,          //
+      exclusiveGateway: handleScratch,         // ?
+      inclusiveGateway: handleScratch,         // ?
+      parallelGateway: handleGateway,          //
 
       // event
-      startEvent: handleScratch,           // ?
-      endEvent: handleScratch,             // ?
-      implicitThrowEvent: unsupported,     //
-      intermediateCatchEvent: unsupported, //
-      intermediateThrowEvent: unsupported, //
-      boundaryEvent: unsupported,          //
-      event: unsupported,                  //
+      startEvent: handleScratch,               // ?
+      endEvent: handleEndEvent,                // X
+      implicitThrowEvent: unsupported,         //
+      intermediateCatchEvent: unsupported,     //
+      intermediateThrowEvent: unsupported,     //
+      boundaryEvent: unsupported,              //
+      event: unsupported,                      //
       
       // extra
-      dataObject: unsupported,
-      property: unsupported,
-      dataObjectReference: unsupported,
-      dataStoreReference: unsupported,
+      dataObject: unsupported,                 //
+      property: unsupported,                   //
+      dataObjectReference: unsupported,        //
+      dataStoreReference: unsupported,         //
      
-      callChoreography: unsupported,
-      subChoreography: unsupported,
-      choreographyTask: unsupported,
+      callChoreography: unsupported,           //
+      subChoreography: unsupported,            //
+      choreographyTask: unsupported,           //
 
       // signal
-      signal: unsupported,
-      message: unsupported,
+      signal: unsupported,                     //
+      message: unsupported,                    //
     };
 
     // Create (Intermediate) Representation: MAIN
@@ -414,18 +470,18 @@ var compiler = {
       var newNode = null;
 
       // add to end
-      if( endMap[seq.sourceRef] ) { 
-        compiler.log( "< (" + endMap[seq.sourceRef][0].beg + " >) " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
-        if( ! nextMap[seq.targetRef] ) { 
-          nextMap[seq.targetRef] = [];
+      if( endMap[seq.from] ) { 
+        compiler.log( "< (" + endMap[seq.from][0].beg + " >) " + seq.from + " -> " + seq.to ); // DBG
+        if( ! nextMap[seq.to] ) { 
+          nextMap[seq.to] = [];
         }
-        newNode = new GraphNode(seq.sourceRef, seq.targetRef);
-        newNode.next = nextMap[seq.targetRef];
+        newNode = new GraphNode(seq.from, seq.to);
+        newNode.next = nextMap[seq.to];
 
-        if( ! nextMap[seq.sourceRef] ) { 
-          nextMap[seq.sourceRef] = [];
+        if( ! nextMap[seq.from] ) { 
+          nextMap[seq.from] = [];
         }
-        nextMap[seq.sourceRef].push(newNode);
+        nextMap[seq.from].push(newNode);
       } 
 
       graphStart: 
@@ -433,15 +489,15 @@ var compiler = {
         var begin = graph.start[b];
 
         // insert before begin
-        if( seq.targetRef == begin.beg ) { 
-          compiler.log( "> " + seq.sourceRef + " -> " + seq.targetRef + " (> " + begin.end + ")" ); // DBG
-          if( ! nextMap[seq.targetRef] ) { 
-            nextMap[seq.targetRef] = [];
+        if( seq.to == begin.beg ) { 
+          compiler.log( "> " + seq.from + " -> " + seq.to + " (> " + begin.end + ")" ); // DBG
+          if( ! nextMap[seq.to] ) { 
+            nextMap[seq.to] = [];
           }
-          var next = nextMap[seq.targetRef];
+          var next = nextMap[seq.to];
           next.push(begin);
           if( ! newNode ) { 
-            newNode = new GraphNode(seq.sourceRef, seq.targetRef);
+            newNode = new GraphNode(seq.from, seq.to);
             newNode.next = next;
           }
 
@@ -451,12 +507,12 @@ var compiler = {
 
       // neither beg or end linked anywhere
       if( ! newNode ) {
-        compiler.log( "! " + seq.sourceRef + " -> " + seq.targetRef ); // DBG
-        if( ! nextMap[seq.targetRef] ) { 
-          nextMap[seq.targetRef] = [];
+        compiler.log( "! " + seq.from + " -> " + seq.to ); // DBG
+        if( ! nextMap[seq.to] ) { 
+          nextMap[seq.to] = [];
         }
-        newNode = new GraphNode(seq.sourceRef, seq.targetRef);
-        newNode.next = nextMap[seq.targetRef];
+        newNode = new GraphNode(seq.from, seq.to);
+        newNode.next = nextMap[seq.to];
 
         graph.start.push(newNode);
       } 
