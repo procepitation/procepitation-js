@@ -1,19 +1,19 @@
 
-var compiler = { 
+var runme = { 
 
   logI : 0,
   log : function(logMsg) { 
-    console.log( (compiler.logI++) + " " + logMsg );
+    console.log( (runme.logI++) + " " + logMsg );
   },
 
   debugData: {},
   debugCheck: function( obj ) { 
     if( obj ) { 
-      if( compiler.debugData.last === obj ) { 
+      if( runme.debugData.last === obj ) { 
         throw new Error( "Already checked " + obj.nodeName + "!" );
       }
     }
-    compiler.debugData.last = obj;
+    runme.debugData.last = obj;
   },
 
   createRep: function(xmlDoc) {
@@ -177,7 +177,7 @@ var compiler = {
       var name = exprNode.attributes[0].nodeValue;
       var expr = {};
       var numChildren = exprNode.childNodes.length-1; 
-      compiler.debugCheck( exprNode ); 
+      runme.debugCheck( exprNode ); 
       if( numChildren == 0 ) { 
         return trimString( exprNode.childNodes[0].data );
       } else { 
@@ -420,13 +420,13 @@ var compiler = {
     };
 
     var addToEndAndBegMap = function(newNode, graphRep) {
-      // compiler.log( "  | " + newNode.beg + " > " + newNode.end + " [" + endMap[newNode.end] + ", " + begMap[newNode.beg] + "]" ); // DBG
+      // runme.log( "  | " + newNode.beg + " > " + newNode.end + " [" + endMap[newNode.end] + ", " + begMap[newNode.beg] + "]" ); // DBG
 
       // Add to ENDS
       if( ! endMap[newNode.end] ) { 
         endMap[newNode.end] = [newNode];
       } else { 
-        compiler.log( " *E " + newNode.end + " < " + newNode.beg ); // DBG
+        runme.log( " *E " + newNode.end + " < " + newNode.beg ); // DBG
         newNode.preMerge = true;
         var ends = endMap[newNode.end];
         if( ends.length == 1 ) { 
@@ -440,7 +440,7 @@ var compiler = {
       for( var s = graphRep.start.length-1; s >= 0; --s ) { 
         var startNode = graphRep.start[s];
         if( startNode.beg == newNode.end ) { 
-          compiler.log( "r (" + newNode.beg + " >) " + startNode.beg + " > " + startNode.end ); // DBG
+          runme.log( "r (" + newNode.beg + " >) " + startNode.beg + " > " + startNode.end ); // DBG
           nextMap[newNode.end].push(startNode);
         } else { 
           newStart.push(startNode);
@@ -455,7 +455,7 @@ var compiler = {
         begMap[newNode.beg] = [newNode];
       } 
       else { 
-        compiler.log( " *B " + newNode.beg + " > " + newNode.end ); // DBG
+        runme.log( " *B " + newNode.beg + " > " + newNode.end ); // DBG
         newNode.postFork = true;
         var begs = begMap[newNode.beg];
         if( begs.length == 1 ) { 
@@ -465,75 +465,93 @@ var compiler = {
       }
     }
 
-    for( var s = initDefRep.seq.length-1; s >= 0; --s ) {
-      var seq = initDefRep.seq[s];
-      var newNode = null;
-
-      // add to end
-      if( endMap[seq.from] ) { 
-        compiler.log( "< (" + endMap[seq.from][0].beg + " >) " + seq.from + " -> " + seq.to ); // DBG
-        if( ! nextMap[seq.to] ) { 
-          nextMap[seq.to] = [];
-        }
-        newNode = new GraphNode(seq.from, seq.to);
-        newNode.next = nextMap[seq.to];
-
-        if( ! nextMap[seq.from] ) { 
-          nextMap[seq.from] = [];
-        }
-        nextMap[seq.from].push(newNode);
-      } 
-
-      graphStart: 
-      for( var b = graph.start.length-1; b >= 0; --b ) { 
-        var begin = graph.start[b];
-
-        // insert before begin
-        if( seq.to == begin.beg ) { 
-          compiler.log( "> " + seq.from + " -> " + seq.to + " (> " + begin.end + ")" ); // DBG
+    var compileProcess = function(thisDefRep) { 
+      var s = thisDefRep.seq.length;
+      while( --s >= 0 ) {
+        var seq = thisDefRep.seq[s];
+        var newNode = null;
+  
+        // add to end
+        if( endMap[seq.from] ) { 
+          runme.log( "< (" + endMap[seq.from][0].beg + " >) " + seq.from + " -> " + seq.to ); // DBG
           if( ! nextMap[seq.to] ) { 
             nextMap[seq.to] = [];
           }
-          var next = nextMap[seq.to];
-          next.push(begin);
-          if( ! newNode ) { 
-            newNode = new GraphNode(seq.from, seq.to);
-            newNode.next = next;
+          newNode = new GraphNode(seq.from, seq.to);
+          newNode.next = nextMap[seq.to];
+  
+          if( ! nextMap[seq.from] ) { 
+            nextMap[seq.from] = [];
           }
-
-          graph.start[b] = newNode;
+          nextMap[seq.from].push(newNode);
+        } 
+  
+        graphStart: 
+        for( var b = graph.start.length-1; b >= 0; --b ) { 
+          var begin = graph.start[b];
+  
+          // insert before begin
+          if( seq.to == begin.beg ) { 
+            runme.log( "> " + seq.from + " -> " + seq.to + " (> " + begin.end + ")" ); // DBG
+            if( ! nextMap[seq.to] ) { 
+              nextMap[seq.to] = [];
+            }
+            var next = nextMap[seq.to];
+            next.push(begin);
+            if( ! newNode ) { 
+              newNode = new GraphNode(seq.from, seq.to);
+              newNode.next = next;
+            }
+  
+            graph.start[b] = newNode;
+          }
+        }
+  
+        // neither beg or end linked anywhere
+        if( ! newNode ) {
+          runme.log( "! " + seq.from + " -> " + seq.to ); // DBG
+          if( ! nextMap[seq.to] ) { 
+            nextMap[seq.to] = [];
+          }
+          newNode = new GraphNode(seq.from, seq.to);
+          newNode.next = nextMap[seq.to];
+  
+          graph.start.push(newNode);
+        } 
+  
+        addToEndAndBegMap( newNode, graph );
+      }
+  
+      // clean up starts
+      var newStart = [];
+      for( var s = graph.start.length-1; s >= 0; --s ) { 
+        if( ! endMap[graph.start[s].beg] ) { 
+          newStart.push( graph.start[s] );
+        } else { 
+          runme.log( "X " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
         }
       }
-
-      // neither beg or end linked anywhere
-      if( ! newNode ) {
-        compiler.log( "! " + seq.from + " -> " + seq.to ); // DBG
-        if( ! nextMap[seq.to] ) { 
-          nextMap[seq.to] = [];
-        }
-        newNode = new GraphNode(seq.from, seq.to);
-        newNode.next = nextMap[seq.to];
-
-        graph.start.push(newNode);
-      } 
-
-      addToEndAndBegMap( newNode, graph );
+      if( newStart.length != graph.start ) { 
+        graph.start = newStart;
+      }
+  
+      return graph;
     }
 
-    // clean up starts
-    var newStart = [];
-    for( var s = graph.start.length-1; s >= 0; --s ) { 
-      if( ! endMap[graph.start[s].beg] ) { 
-        newStart.push( graph.start[s] );
-      } else { 
-        compiler.log( "X " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
+    // ---
+    // MAIN: compileInstance
+    // ---
+
+    var i = initDefRep.process.length;
+    while( --i >= 0 ) { 
+      console.log( "!!!: " + i );
+      inst = compileProcess(initDefRep.process[i]);
+      if( i < initDefRep.process.length-1 ) { 
+        throw new UnsupError( "Multiple process definitions in one file" );
       }
     }
-    if( newStart.length != graph.start ) { 
-      graph.start = newStart;
-    }
-
-    return graph;
+   
+    return inst;
   },
   
   // ----
@@ -545,7 +563,7 @@ var compiler = {
   },
  
   // ---
-  // MAIN
+  // COMPILE (MAIN)
   // ---
 
   compile: function(xmlDoc) {
@@ -557,4 +575,4 @@ var compiler = {
     return compiledProcess;
   }
 
-} 
+}; 

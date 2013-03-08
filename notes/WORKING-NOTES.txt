@@ -1,5 +1,9 @@
 
 - working on and running the processes!
+! Minimal process, to start with, and then extend
+  + convert the graph representation to a candy string
+    + array elements with run(context) functions!
+
 
 - left over: 
   - clean up tests (equal, notEqual instead of ok, etc. )

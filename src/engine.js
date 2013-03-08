@@ -1,79 +1,36 @@
 
-var engine = { 
-// Constants
-
-var map = { 
-  start: 0,
-  end: 1,
-  fork: 2,
-  script: 3
-};
-
-
-
-// -----
-// Parts
-// -----
-function Node(myType) { 
-  this.type = myType; 
-};
-
-function ScriptNode(myScript) { 
-  this.type = map.script;
-  this.script = myScript;
+if( typeof runme == 'undefined' ) { 
+  var runme = {};
 }
-ScriptNode.prototype = new Node();
 
-function Context() { 
-  this.done = false;
-};
+runme.run = function(defInst) { 
 
-// -------
-// Actions
-// -------
+  var p = defInst.process.length;
 
-// dictionary
-var nodeFunctions = { 
-  start:  function(node, context) { 
-            console.log(">") 
-          },
-  end:    function(node, context) { 
-            console.log("<" ); 
-            context.done = true 
-          },
-  fork:   function(node, context) { console.log("F") },
-  script: function(node, context) { 
-            node.script(context);
-          }
-};
+  // TODO: create a context specific object? 
+  var context = {};
 
-// switch/lookup
-var functionLookup = [
-  nodeFunctions.start,
-  nodeFunctions.end,
-  nodeFunctions.fork,
-  nodeFunctions.script
-];
+  while( --p >= 0 ) { 
+    if( p < defInst.process.length-1 ) { 
+      throw new UnsupError( "Multiple processes in a definition instance" );
+    }
 
-// Engine processing
-function run(runInst) { 
+    var process = defInst.process[p];
 
-  var context = new Context();
-  
-  for( var i=0, done = false; !context.done; ++i) {
-    var node = runInst[i];
-    functionLookup[node.type](node, context);
+    var i = process.length;
+    while( --i >= 0 ) { 
+      // * context pre-processing: 
+      // ??
+
+      context = process[i].run(context);
+
+      // * context post-processing: 
+      // ??
+
+      // persistence? 
+
+    }
   }
 
-}
-
-// ---------
-// Test
-// --------
-
-var inst = [
-  new Node(map.start),
-  new ScriptNode(function() { console.log("Scripted!") }),
-  new Node(map.end)
 ];
 
