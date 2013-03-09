@@ -32,5 +32,5 @@ runme.run = function(defInst) {
     }
   }
 
-];
+};
 

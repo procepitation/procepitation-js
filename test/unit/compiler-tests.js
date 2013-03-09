@@ -50,7 +50,7 @@ test( "Double Nested SubProcess: basic test", function() {
 module("[Instance]");
 
 test( "Minimal Process: basic test", function() {
-  expect(10);
+  expect(11);
 
   var bpmn2File = "bpmn/MinimalProcess.bpmn20.xml";
     
@@ -68,14 +68,17 @@ test( "Minimal Process: basic test", function() {
   ok( procRep.nodes["_3"].events[0] != null && procRep.nodes["_3"].events[0].type == "terminate", 
       "terminate event definition added to end node" );
  
-  var inst = runme.compileInstance(defRep);
+  defRep = runme.createGraph(defRep);
   
-  // 5 tests
-  notEqual( inst, null, "non-null process instance" );
-  notEqual( inst.start, null, "non-null start node array" );
-  equal( inst.start[0].beg,  "_1", "correct start node" );
-  notEqual( inst.start[0].next, null, "node stairway started." );
-  equal( inst.start[0].end, inst.start[0].next[0].beg, "correct link between 2 nodes" );
+  // 6 tests
+  notEqual( defRep, null, "non-null definition representation" );
+  ok( typeof defRep.process !== "undefined" && defRep.process.length > 0, 
+      "non-empty process array field" );
+  var graph = defRep.process[0].graph;
+  notEqual( graph.start, null, "non-null start node array" );
+  equal( graph.start[0].beg,  "_1", "correct start node" );
+  notEqual( graph.start[0].next, null, "node stairway started." );
+  equal( graph.start[0].end, graph.start[0].next[0].beg, "correct link between 2 nodes" );
 });
 
 test( "Minimal Process: backwards test", function() {
@@ -91,16 +94,20 @@ test( "Minimal Process: backwards test", function() {
   procRep.seq[0] = procRep.seq[1];
   procRep.seq[1] = tmp;
   
-  var inst = runme.compileInstance(defRep);
+  var inst = runme.createGraph(defRep);
   
-  ok( inst != null, "non-null process instance" );
-  ok( inst.start, "non-nuill start node array" );
-  ok( inst.start[0].beg == "_1", "correct start node" );
-  ok( inst.start[0].next, "node stairway exists." );
-  ok( inst.start[0].end == inst.start[0].next[0].beg, "correct link between 2 nodes" );
+  notEqual( defRep, null, "non-null definition representation" );
+  ok( typeof defRep.process !== "undefined" && defRep.process.length > 0, 
+      "non-empty process array field" );
+  var graph = defRep.process[0].graph;
+  equal( graph.start[0].beg,  "_1", "correct start node" );
+  notEqual( typeof graph.start[0].next, "undefined", "node stairway exists." );
+  equal( graph.start[0].end, graph.start[0].next[0].beg, "correct link between 2 nodes" );
 });
 
 test( "Inclusive Gateway: representation: loop test", function() {
+  expect(8);
+  
   var xmlDoc = loadAndParse("bpmn/gateway/InclusiveGatewayTest.testLoop.bpmn20.xml");
   var defRep = runme.createRep(xmlDoc);
   var procRep = defRep.process[0];
@@ -110,31 +117,33 @@ test( "Inclusive Gateway: representation: loop test", function() {
   var l = 0; for( i in procRep.nodes ) { ++l; }
   equal( l, 8, "number of elements in procRep.nodes" );
   
-  var inst = runme.compileInstance(defRep);
+  var inst = runme.createGraph(defRep);
   
-  notEqual( inst, null, "non-null process instance" );
-  notEqual( inst.start, null, "non-nuill start node array" );
-  equal( inst.start.length, 3, "there should be 3 start nodes" );
+  notEqual( defRep, null, "non-null definition representation" );
+  ok( typeof defRep.process !== "undefined" && defRep.process.length > 0, 
+      "non-empty process array field" );
+  var graph = defRep.process[0].graph;
+  equal( graph.start.length, 3, "there should be 3 start nodes" );
   var x = ""; var startName = "theStart";
-  for( var i = 0; i < inst.start.length; ++i ) {
-    if( inst.start[i].beg != startName ) { 
+  for( var i = 0; i < graph.start.length; ++i ) {
+    if( graph.start[i].beg != startName ) { 
       x = i;
     }
   }
   var badStart = startName;
   if( x != "" ) { 
-    badStart = inst.start[x].beg; 
+    badStart = graph.start[x].beg; 
   }
   equal( x, "", "Start node [" + x + "] should be '" + startName + "' [not " + badStart + "]" );
  
   var endName = "theEnd"
-  ok( helper.postForkAndPreMergeTest(inst, endName ), "Recursive postFork, preMerge and 'End' test" );
+  ok( helper.postForkAndPreMergeTest(graph, endName ), "Recursive postFork, preMerge and 'End' test" );
 });
 
 test( "Nested Fork/Join: test", function() {
-  var bpmn2File = "bpmn/gateway/ParallelGatewayTest.testNestedForkJoin.bpmn20.xml";
+  expect(8);
   
-  var xmlDoc = loadAndParse(bpmn2File);
+  var xmlDoc = loadAndParse("bpmn/gateway/ParallelGatewayTest.testNestedForkJoin.bpmn20.xml");
   var defRep = runme.createRep(xmlDoc);
   var procRep = defRep.process[0];
   
@@ -143,32 +152,38 @@ test( "Nested Fork/Join: test", function() {
   var l = 0; for( i in procRep.nodes ) { ++l; }
   equal( l, 12, "number of elements in procRep.nodes" );
   
-  var inst = runme.compileInstance(defRep);
+  var inst = runme.createGraph(defRep);
   
-  ok( inst != null, "non-null process instance" );
-  ok( inst.start, "non-nuill start node array" );
-  ok( inst.start.length == 1, "only one start node");
+  notEqual( defRep, null, "non-null definition representation" );
+  ok( typeof defRep.process !== "undefined" && defRep.process.length > 0, 
+      "non-empty process array field" );
+  var graph = defRep.process[0].graph;
+  ok( typeof graph.start !== "undefined", "non-null start node array" );
+  equal( graph.start.length, 1, "only one start node");
   
-  ok( helper.postForkAndPreMergeTest(inst, "End" ), "Recursive postFork, preMerge and 'End' test" );
+  ok( helper.postForkAndPreMergeTest(graph, "End" ), "Recursive postFork, preMerge and 'End' test" );
 });
 
 test( "Nested Fork/Join: random sequence test", function() {
-  var bpmn2File = "bpmn/gateway/ParallelGatewayTest.testNestedForkJoin.bpmn20.xml";
+  expect(5);
   
-  var xmlDoc = loadAndParse(bpmn2File);
+  var xmlDoc = loadAndParse("bpmn/gateway/ParallelGatewayTest.testNestedForkJoin.bpmn20.xml");
   var defRep = runme.createRep(xmlDoc);
   var procRep = defRep.process[0];
   
   // reorder process definition
   procRep.seq = helper.reorderArray(procRep.seq);
 
-  var inst = runme.compileInstance(defRep);
+  var inst = runme.createGraph(defRep);
   
-  ok( inst != null, "non-null process instance" );
-  ok( inst.start, "non-nuill start node array" );
-  ok( inst.start.length == 1, "only one start node [" + inst.start.length + "]" );
+  notEqual( typeof defRep, "undefined", "non-null definition representation" );
+  ok( typeof defRep.process !== "undefined" && defRep.process.length > 0, 
+      "non-empty process array field" );
+  var graph = defRep.process[0].graph;
+  notEqual( typeof graph.start, "undefined", "non-null start node array" );
+  equal( graph.start.length, 1, "only one start node [" + graph.start.length + "]" );
   
-  ok( helper.postForkAndPreMergeTest(inst, "End" ), "Recursive postFork, preMerge and 'End' test" );
+  ok( helper.postForkAndPreMergeTest( graph, "End" ), "Recursive postFork, preMerge and 'End' test" );
 });
 
 module("[Engine]");

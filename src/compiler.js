@@ -403,10 +403,10 @@ var runme = {
   },
 
   // ----
-  // COMPILE INSTANCE (ON THE BASIS OF THE INTERMEDIATE REPRESENTATION)
+  // CREATE GRAPH (ON THE BASIS OF THE INTERMEDIATE REPRESENTATION)
   // ----
   
-  compileInstance: function(initDefRep) {
+  createGraph: function(initDefRep) {
     var graph = {
       start: []
     }; 
@@ -465,10 +465,10 @@ var runme = {
       }
     }
 
-    var compileProcess = function(thisDefRep) { 
-      var s = thisDefRep.seq.length;
+    var internalCreateGraph = function(thisProcRep) { 
+      var s = thisProcRep.seq.length;
       while( --s >= 0 ) {
-        var seq = thisDefRep.seq[s];
+        var seq = thisProcRep.seq[s];
         var newNode = null;
   
         // add to end
@@ -539,21 +539,35 @@ var runme = {
     }
 
     // ---
-    // MAIN: compileInstance
+    // MAIN: createGraph
     // ---
 
     var i = initDefRep.process.length;
     while( --i >= 0 ) { 
       console.log( "!!!: " + i );
-      inst = compileProcess(initDefRep.process[i]);
+      var proc = initDefRep.process[i];
+      proc.graph = internalCreateGraph(proc);
+      delete proc.seq;
+      // delete proc.nodes;
       if( i < initDefRep.process.length-1 ) { 
         throw new UnsupError( "Multiple process definitions in one file" );
       }
     }
    
-    return inst;
+    return initDefRep;
   },
   
+  // ----
+  // COMPILE INSTANCE (ON THE BASIS OF THE INTERMEDIATE GRAPH REP)
+  // ----
+ 
+  compileInstance: function(thisDefRep) { 
+    var i = thisDefRep.start.length;
+    while( i-- >= 0 ) { 
+      
+    }
+  },
+
   // ----
   // OPTIMIZE (THE INTERMEDIATE REPRESENTATION)
   // ----
@@ -569,8 +583,8 @@ var runme = {
   compile: function(xmlDoc) {
     
     var defRep = this.createRep(xmlDoc);
+    var compiledProcess = this.createGraph(defRep);
     defRep = this.optimize(defRep);
-    var compiledProcess = this.compileInstance(defRep);
   
     return compiledProcess;
   }

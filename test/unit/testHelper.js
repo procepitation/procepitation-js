@@ -27,7 +27,7 @@ helper = {
     return newArr;
   },
   
-  postForkAndPreMergeTest: function(inst, end) { 
+  postForkAndPreMergeTest: function(graph, end) { 
     var nodeBegsVisited = new Object();
     
     var recursivePFAndPMTest = function(node, endName) { 
@@ -61,15 +61,15 @@ helper = {
       }
     }
 
-    if( ! inst ) { 
+    if( ! graph ) { 
       throw new Error( "Argument 'node' is not defined." );
     }
     if( ! end ) { 
       throw new Error( "Argument 'endName' is not defined." );
     }
 
-    for( var g = 0; g < inst.start.length; ++g ) { 
-      recursivePFAndPMTest(inst.start[g], end);
+    for( var g = 0; g < graph.start.length; ++g ) { 
+      recursivePFAndPMTest(graph.start[g], end);
     }
     return true;
   }
