@@ -1,9 +1,8 @@
 
 var runme = { 
 
-  logI : 0,
   log : function(logMsg) { 
-    console.log( (runme.logI++) + " " + logMsg );
+    console.log( logMsg );
   },
 
   debugData: {},
@@ -17,30 +16,11 @@ var runme = {
   },
 
   createRep: function(xmlDoc) {
- 
-    /**
-     * Basic objects and functions
-     */
-
-    function NodeRepr(type) { 
-      this.repType = type;
-      // Functional object in candy string 
-      // Should contain runtime executable logic
-      this.closure = function(context) { 
-      }
-    };
-    NodeRepr.prototype = new Object();
-
-    function SeqRepr() { 
-      // data holder for graph structure determination later
-    }
-    SeqRepr.prototype = new Object();
-
     function UnsupError(element) { 
       this.message = element + " is/are not yet supported.";
     };
     UnsupError.prototype = new Error();
-
+ 
     var unsupported = function(child) { 
       throw new UnsupError("'" + child.localName + "' elements");
     }
@@ -117,16 +97,16 @@ var runme = {
       if( ! addToDefRep.process ) { 
         addToDefRep.process = [];
       }
-      var procRep = {};
-      addToDefRep.process.push(procRep);
+      var newProcRep = {};
+      addToDefRep.process.push(newProcRep);
 
-      procRep.attr = {};
+      newProcRep.attr = {};
       for( var a = procNode.attributes.length-1; a >= 0; --a ) { 
         var attr = procNode.attributes[a];
-        procRep.attr[attr.localName] = attr.value;
+        newProcRep.attr[attr.localName] = attr.value;
       } 
 
-      handleProcessChildren(procNode, procRep);
+      handleProcessChildren(procNode, newProcRep);
     }
 
     var handleMessage = function(msgNode, addToDefRep) { 
@@ -173,11 +153,42 @@ var runme = {
      * Process level (and sub-level) elements
      */
 
+    /**
+     * Basic objects 
+     */
+
+    function NodeRepr(type) { 
+      this.repType = type;
+      // Functional object in candy string 
+      // Should contain runtime executable logic
+      this.getClosure = function() { 
+        return function(context) { 
+          // do nothing
+        }
+      }
+    };
+    NodeRepr.prototype = new Object();
+
+    function ScriptRepr() { 
+      this.script = 'throw new Error("No script defined for scriptTask");';
+
+      this.getClosure = function() { 
+        var script = this.script;
+        return function(context) { 
+          eval(script);
+        }
+      }
+    }
+    ScriptRepr.prototype = new Object();
+
+    /**
+     * Parsing functions/handlers
+     */
+
     var handleExpression = function( exprNode ) { 
-      var name = exprNode.attributes[0].nodeValue;
       var expr = {};
       var numChildren = exprNode.childNodes.length-1; 
-      runme.debugCheck( exprNode ); 
+      runme.debugCheck( exprNode );  // FIXME: delete debug
       if( numChildren == 0 ) { 
         return trimString( exprNode.childNodes[0].data );
       } else { 
@@ -197,7 +208,7 @@ var runme = {
     }
 
     var handleSequenceFlow = function(seqNode, addToProcRep) { 
-      var seqRep = new SeqRepr();
+      var seqRep = new NodeRepr();
 
       // attributes
       for( var sa = seqNode.attributes.length-1; sa >= 0; --sa ) { 
@@ -326,6 +337,30 @@ var runme = {
       return eventRep;
     }
 
+    var handleScriptTask = function(scriptNode, addToProcRep) { 
+      var scriptRep = new ScriptRepr(scriptNode.localName);
+      for( var sa = scriptNode.attributes.length-1; sa >= 0; --sa ) { 
+        if( scriptNode.attributes[sa].localName == "id" ) { 
+          scriptRep.id = scriptNode.attributes[sa].value;
+        }
+      }
+      for( var c = scriptNode.children.length-1; c >= 0; --c ) { 
+        var child = scriptNode.children[c];
+        if( child.nodeType == 1 && child.nodeName == "script" ) { 
+          scriptRep["script"] = handleExpression( child );
+          break;
+        } 
+      }
+
+      if( scriptRep.id ) { 
+        addToProcRep.nodes[scriptRep.id] = scriptRep;
+      } else { 
+        throw new Error( "Node " + scriptNode.localName + " does not have an id." );
+      }
+
+      return scriptRep;
+    }
+
     var handleScratch = function(scratchNode, addToProcRep) { 
       var stepRep = new NodeRepr(scratchNode.localName);
       for( var sa = scratchNode.attributes.length-1; sa >= 0; --sa ) { 
@@ -357,7 +392,7 @@ var runme = {
       businessRuleTask: unsupported,           //
       manualTask: unsupported,                 //
       receiveTask: unsupported,                //
-      scriptTask: handleScratch,               // ?
+      scriptTask: handleScriptTask,            // X
       sendTask: unsupported,                   //
       serviceTask: unsupported,                //
       userTask: handleScratch,                 // ?
@@ -407,6 +442,11 @@ var runme = {
   // ----
   
   createGraph: function(initDefRep) {
+    function UnsupError(element) { 
+      this.message = element + " is/are not yet supported.";
+    };
+    UnsupError.prototype = new Error();
+
     var graph = {
       start: []
     }; 
@@ -465,7 +505,7 @@ var runme = {
       }
     }
 
-    var internalCreateGraph = function(thisProcRep) { 
+    var createProcessGraph = function(thisProcRep) { 
       var s = thisProcRep.seq.length;
       while( --s >= 0 ) {
         var seq = thisProcRep.seq[s];
@@ -544,11 +584,10 @@ var runme = {
 
     var i = initDefRep.process.length;
     while( --i >= 0 ) { 
-      console.log( "!!!: " + i );
       var proc = initDefRep.process[i];
-      proc.graph = internalCreateGraph(proc);
+      proc.graph = createProcessGraph(proc);
       delete proc.seq;
-      // delete proc.nodes;
+
       if( i < initDefRep.process.length-1 ) { 
         throw new UnsupError( "Multiple process definitions in one file" );
       }
@@ -562,10 +601,70 @@ var runme = {
   // ----
  
   compileInstance: function(thisDefRep) { 
-    var i = thisDefRep.start.length;
-    while( i-- >= 0 ) { 
-      
+
+    function UnsupError(element) { 
+      this.message = element + " is/are not yet supported.";
+    };
+    UnsupError.prototype = new Error();
+
+    var compileProcessInstance = function(procRep, wholeDefRep) { 
+
+      if( procRep.graph.start.length > 1 ) {  
+        // FIXME: eventually supported!!
+        throw new UnsupError( "Multiple start nodes" );
+      }
+
+      procRep.inst = traverseGraph(procRep.graph.start[0], procRep.nodes, []);
+      // delete procRep.nodes; // FIXME: after debug, put back in
+      // FIXME: once we know for sure: delete procRep.graph;
+
     }
+
+    var visited = {};
+
+    var traverseGraph = function(seq, nodes, candyString) { 
+
+      while( seq != null ) { 
+        candyString.push(nodes[seq.beg].getClosure());
+
+        switch(seq.next.length) { 
+          case 0:
+            candyString.push(nodes[seq.end].getClosure());
+            seq = null;
+            break;
+          case 1:
+            // check if visited? 
+            if( visited[seq.end] ) { 
+              seq = null;
+              continue;
+            }
+            visited[seq.end] = true;
+
+            seq = seq.next[0];
+            break;
+          default: 
+            throw new UnsupError( "Branching processes." );
+            var b = seq.next.length;
+            while( --b >= 0 ) { 
+              // FIXME: visited!
+            }
+        }
+
+      }
+
+      return candyString;
+    }
+
+
+    var i = thisDefRep.process.length;
+    while( --i >= 0 ) { 
+      compileProcessInstance(thisDefRep.process[i], thisDefRep);
+      if( i < thisDefRep.process.length-1 ) { 
+        throw new UnsupError( "Multiple (sub-)processes" );
+      }
+    }
+
+    return thisDefRep;
   },
 
   // ----
@@ -583,10 +682,11 @@ var runme = {
   compile: function(xmlDoc) {
     
     var defRep = this.createRep(xmlDoc);
-    var compiledProcess = this.createGraph(defRep);
-    defRep = this.optimize(defRep);
+    defRep = this.createGraph(defRep);
+    // defRep = this.optimize(defRep);
+    defRep = this.compileInstance(defRep);
   
-    return compiledProcess;
+    return defRep;
   }
 
 }; 

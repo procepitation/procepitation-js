@@ -1,6 +1,6 @@
 module("[Representation]");
 
-test( "Start to End: basic test", function() {
+test( "Start to End: basic", function() {
   expect(3);
 
   var xmlDoc = loadAndParse("bpmn/StartToEnd.bpmn20.xml");
@@ -12,7 +12,7 @@ test( "Start to End: basic test", function() {
   equal( l, 2, "all nodes should be stored" );
 });
 
-test( "Inclusive Gateway: condition diverging test", function() {
+test( "Inclusive Gateway: diverging condition", function() {
   expect(4);
   
   var xmlDoc = loadAndParse("bpmn/gateway/InclusiveGatewayTest.testDivergingInclusiveGateway.bpmn20.xml");
@@ -32,7 +32,7 @@ test( "Inclusive Gateway: condition diverging test", function() {
   equal( x, 3, "sequence flow condition expression not filled for all conditions");
 });
 
-test( "Double Nested SubProcess: basic test", function() {
+test( "Double Nested SubProcess: basic", function() {
   expect(4);
   
   var xmlDoc = loadAndParse("bpmn/subprocess/SubProcessTest.testDoubleNestedSimpleSubProcess.bpmn20.xml");
@@ -47,9 +47,9 @@ test( "Double Nested SubProcess: basic test", function() {
   notEqual( third.seq, null, "seq field present for doubly nested subprocess" );
 });
 
-module("[Instance]");
+module("[Graph]");
 
-test( "Minimal Process: basic test", function() {
+test( "Minimal Process: basic", function() {
   expect(11);
 
   var bpmn2File = "bpmn/MinimalProcess.bpmn20.xml";
@@ -81,7 +81,7 @@ test( "Minimal Process: basic test", function() {
   equal( graph.start[0].end, graph.start[0].next[0].beg, "correct link between 2 nodes" );
 });
 
-test( "Minimal Process: backwards test", function() {
+test( "Minimal Process: backwards", function() {
   expect(5);
 
   var bpmn2File = "bpmn/MinimalProcess.bpmn20.xml"
@@ -105,7 +105,7 @@ test( "Minimal Process: backwards test", function() {
   equal( graph.start[0].end, graph.start[0].next[0].beg, "correct link between 2 nodes" );
 });
 
-test( "Inclusive Gateway: representation: loop test", function() {
+test( "Inclusive Gateway: loop", function() {
   expect(8);
   
   var xmlDoc = loadAndParse("bpmn/gateway/InclusiveGatewayTest.testLoop.bpmn20.xml");
@@ -140,7 +140,7 @@ test( "Inclusive Gateway: representation: loop test", function() {
   ok( helper.postForkAndPreMergeTest(graph, endName ), "Recursive postFork, preMerge and 'End' test" );
 });
 
-test( "Nested Fork/Join: test", function() {
+test( "Nested Fork/Join:", function() {
   expect(8);
   
   var xmlDoc = loadAndParse("bpmn/gateway/ParallelGatewayTest.testNestedForkJoin.bpmn20.xml");
@@ -164,7 +164,7 @@ test( "Nested Fork/Join: test", function() {
   ok( helper.postForkAndPreMergeTest(graph, "End" ), "Recursive postFork, preMerge and 'End' test" );
 });
 
-test( "Nested Fork/Join: random sequence test", function() {
+test( "Nested Fork/Join: random sequence", function() {
   expect(5);
   
   var xmlDoc = loadAndParse("bpmn/gateway/ParallelGatewayTest.testNestedForkJoin.bpmn20.xml");
@@ -186,15 +186,40 @@ test( "Nested Fork/Join: random sequence test", function() {
   ok( helper.postForkAndPreMergeTest( graph, "End" ), "Recursive postFork, preMerge and 'End' test" );
 });
 
-module("[Engine]");
 
-test( "Minimal Process: basic test", function() {
-  expect(0);
+module("[Instance]");
+
+test( "Minimal Process: basic", function() {
+  expect(4);
 
   var bpmn2File = "bpmn/MinimalProcess.bpmn20.xml";
     
   var xmlDoc = loadAndParse(bpmn2File);
-  var procInst = runme.compile(xmlDoc);
+  var defRep = runme.createRep(xmlDoc);
+  defRep = runme.createGraph(defRep);
+  defRep = runme.compileInstance(defRep);
 
-  runme.run(procInst);
+  notEqual( typeof defRep, "undefined", "compileInstance produces object" );
+  equal( typeof defRep.process,  "object", "process field filled" );
+  var procRep = defRep.process[0];
+  equal( typeof procRep.inst, "object", "instance filled" );
+  equal( procRep.inst.length, 3, "instance array has correct number of nodes" );
+});
+
+test( "Inclusive Gateway: diverging conditiont", function() {
+
+  var xmlDoc = loadAndParse("bpmn/gateway/InclusiveGatewayTest.testDivergingInclusiveGateway.bpmn20.xml");
+  var defRep = runme.createRep(xmlDoc);
+  defRep = runme.createGraph(defRep);
+  defRep = runme.compileInstance(defRep);
+
+});
+
+test( "Inclusive Gateway: loop", function() {
+
+  var xmlDoc = loadAndParse("bpmn/gateway/InclusiveGatewayTest.testLoop.bpmn20.xml");
+  var defRep = runme.createRep(xmlDoc);
+  defRep = runme.createGraph(defRep);
+  defRep = runme.compileInstance(defRep);
+
 });

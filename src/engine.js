@@ -3,33 +3,28 @@ if( typeof runme == 'undefined' ) {
   var runme = {};
 }
 
-runme.run = function(defInst) { 
+runme.runProcess = function(process, defInst) { 
 
-  var p = defInst.process.length;
+  function Context() { 
+    this.log = function(msg) { 
+      runme.log(msg);
+    }
+  }
 
   // TODO: create a context specific object? 
-  var context = {};
+  var context = new Context();
 
-  while( --p >= 0 ) { 
-    if( p < defInst.process.length-1 ) { 
-      throw new UnsupError( "Multiple processes in a definition instance" );
-    }
+  var inst = process.inst;
+  for( var i = 0; i < inst.length; ++i ) { 
+    // * context pre-processing: 
+    // ??
 
-    var process = defInst.process[p];
+    inst[i](context);
 
-    var i = process.length;
-    while( --i >= 0 ) { 
-      // * context pre-processing: 
-      // ??
+    // * context post-processing: 
+    // ??
 
-      context = process[i].run(context);
-
-      // * context post-processing: 
-      // ??
-
-      // persistence? 
-
-    }
+    // persistence? 
   }
 
 };
