@@ -1,17 +1,20 @@
 
-- working on and running the processes!
-! Minimal process, to start with, and then extend
-  + convert the graph representation to a candy string
-    + array elements with run(context) functions!
-
+- Work on creating process instances with branches, loops and subprocesses
 
 - left over: 
-  - clean up tests (equal, notEqual instead of ok, etc. )
   - make sure testing is more extensive and covers everything.. 
     - current tests  don't have all of the tests they should have
     - gateways
     - end events: terminate, etc. 
       -> "event bus" mechanism necessary to communicate
+  - condition expressios
+    - in particular that the condition expressions, of all sorts,
+      can be parsed and added to the rep. 
+    - decide what to do with: 
+      - xpath
+      - tFormalExpression
+      - bpmn2: prefix
+      - .. etc. 
 
 engine: 
   while( running ) { 
@@ -31,11 +34,3 @@ looked into vert.x event bus
     - just does the graph compilation
     - need to do candy string compilation
 
-- Still todo: 
-  . in particular that the condition expressions, of all sorts,
-    can be parsed and added to the rep. 
-  . decide what to do with: 
-    - xpath
-    - tFormalExpression
-    - bpmn2: prefix
-    - .. etc. 
