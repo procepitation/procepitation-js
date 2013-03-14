@@ -5,16 +5,6 @@ var runme = {
     console.log( logMsg );
   },
 
-  debugData: {},
-  debugCheck: function( obj ) { 
-    if( obj ) { 
-      if( runme.debugData.last === obj ) { 
-        throw new Error( "Already checked " + obj.nodeName + "!" );
-      }
-    }
-    runme.debugData.last = obj;
-  },
-
   createRep: function(xmlDoc) {
     function UnsupError(element) { 
       this.message = element + " is/are not yet supported.";
@@ -29,7 +19,7 @@ var runme = {
      * Basic parsing
      */
 
-    var schema = new Object();
+    var schema = {};
     var bpmn2Prefix = null;
     const bpmn2SchemaRE = new RegExp( "http://www.omg.org/spec/BPMN/201\\d+/MODEL" );
 
@@ -71,27 +61,23 @@ var runme = {
           if( processRootLevelElement[child.localName] ) { 
             processRootLevelElement[child.localName](child, createdDefRep); 
           } else { 
-            throw new Error("Root-level '" + child.localName + "' elements are NOT supported.");
+            throw new Error("Root-level '" + child.localName + "' elements in a definition ");
           }
         } 
       }
       return createdDefRep;
     }
  
-    var handleProcessChildren = function(procTypeNode, procTypeRep) { 
-      procTypeRep.nodes = {};
-      for( var n = procTypeNode.children.length-1; n >= 0; --n ) {
-        var child = procTypeNode.children[n];
-        if( child.nodeType == 1 && child.prefix == bpmn2Prefix ) { 
-          if( processProcessElement[child.localName] ) { 
-            processProcessElement[child.localName](child, procTypeRep); 
-          } else { 
-            throw new UnsupError("'" + child.localName + "' elements in a process");
-          }
-        } 
+    function NodeRepr(type) { 
+      this.repType = type;
+      // Functional object in candy string 
+      // Should contain runtime executable logic
+      this.execute = function(context) { 
+        // do nothing
       }
-
-    }
+      this.serialize = function() { 
+      }
+    };
 
     var handleProcess = function(procNode, addToDefRep) { 
       if( ! addToDefRep.process ) { 
@@ -109,10 +95,25 @@ var runme = {
       handleProcessChildren(procNode, newProcRep);
     }
 
+    var handleProcessChildren = function(procTypeNode, procTypeRep) { 
+      procTypeRep.nodes = {};
+      for( var n = procTypeNode.children.length-1; n >= 0; --n ) {
+        var child = procTypeNode.children[n];
+        if( child.nodeType == 1 && child.prefix == bpmn2Prefix ) { 
+          if( processProcessElement[child.localName] ) { 
+            processProcessElement[child.localName](child, procTypeRep); 
+          } else { 
+            throw new UnsupError("'" + child.localName + "' elements in a process");
+          }
+        } 
+      }
+
+    }
+
+    // FIXME
     var handleMessage = function(msgNode, addToDefRep) { 
       if( msgNode.nodeType == 1 && msgNode.prefix == bpmn2Prefix ) { 
-        // FIXME
-        var msgRep = new NodeRepr(msgNode.localName, msgNode.attributes);
+        var msgRep = new NodeRepr(msgNode.localName);
         // attributes of process added as message repr. object fields
         for( var a = msgNode.attributes.length-1; a >= 0; --a ) {  
           var attr = msgNode.attributes[a]; 
@@ -139,14 +140,14 @@ var runme = {
 
     var processRootLevelElement = { 
       "process"        : handleProcess,
-      "message"        : handleMessage,
-      "signal"         : unsupported,
       "itemDefinition" : unsupported,
+      "signal"         : unsupported,
       "error"          : unsupported,
-      "dataStore"      : unsupported,
+      "message"        : handleMessage,
+      "interface"      : unsupported,
       "escalation"     : unsupported,
-      "resource"       : unsupported,
-      "interface"      : unsupported
+      "dataStore"      : unsupported,
+      "resource"       : unsupported
     }
 
     /**
@@ -157,46 +158,63 @@ var runme = {
      * Basic objects 
      */
 
-    function NodeRepr(type) { 
-      this.repType = type;
-      // Functional object in candy string 
-      // Should contain runtime executable logic
-      this.getClosure = function() { 
-        return function(context) { 
-          // do nothing
-        }
-      }
-    };
-    NodeRepr.prototype = new Object();
+    var serializeMap = { 
+      "script"  : 1,
+      "gateway" : 2
+    }
 
     function ScriptRepr() { 
       this.script = 'throw new Error("No script defined for scriptTask");';
 
-      this.getClosure = function() { 
-        var script = this.script;
-        return function(context) { 
-          eval(script);
-        }
+      this.execute = function(context) { 
+        eval(this.script);
+      }
+      this.serialize = function() { 
+        var output = "v1:" + serializeMap["script"];
+        return output;
       }
     }
-    ScriptRepr.prototype = new Object();
+
+    function GatewayRepr(type) { 
+      this.repType = type;
+
+      this.branches = [];
+
+      this.execute = function(context) { 
+        /**
+         * for( each branch B ) { 
+         *   if( evaluate if branch should be run ) { 
+         *     create candystring with branch content
+         *     context.run( candystring ) 
+         *   }
+         * }
+         **/
+         var b = branches.length;
+         while( --b >= 0 ) { 
+           // OCRAM!! FIXME
+         }
+      }
+
+      this.serialize = function() { 
+        var output = "v1:" + serializeMap["gateway"];
+        return output;
+      }
+    }
 
     /**
      * Parsing functions/handlers
      */
 
     var handleExpression = function( exprNode ) { 
-      var expr = {};
-      var numChildren = exprNode.childNodes.length-1; 
-      runme.debugCheck( exprNode );  // FIXME: delete debug
-      if( numChildren == 0 ) { 
+      var exprChildren = exprNode.childNodes.length; 
+      if( exprChildren == 1 ) { 
         return trimString( exprNode.childNodes[0].data );
       } else { 
-        while( numChildren >= 0 ) { 
-          if( exprNode.childNodes[numChildren].nodeType == 4 ) {  
-            return trimString( exprNode.childNodes[numChildren].data );
+        while( --exprChildren >= 0 ) { 
+          if( exprNode.childNodes[exprChildren].nodeType == 4 ) {  
+            // There should only be 1 expression: the first one we find
+            return trimString( exprNode.childNodes[exprChildren].data );
           }
-          numChildren--;
         }
       }
     }
@@ -208,7 +226,7 @@ var runme = {
     }
 
     var handleSequenceFlow = function(seqNode, addToProcRep) { 
-      var seqRep = new NodeRepr();
+      var seqRep = new NodeRepr(seqNode.localName);
 
       // attributes
       for( var sa = seqNode.attributes.length-1; sa >= 0; --sa ) { 
@@ -298,7 +316,8 @@ var runme = {
     }
 
     var handleGateway = function(gatewayNode, gatewayParentRep) { 
-      var gatewayRep = new NodeRepr(gatewayNode.localName);
+      runme.log( "GATEWAY: " + gatewayNode.localName );
+      var gatewayRep = new GatewayRepr(gatewayNode.localName);
       for( var sa = gatewayNode.attributes.length-1; sa >= 0; --sa ) { 
         switch( gatewayNode.attributes[sa].localName ) { 
           case "id": 
@@ -319,7 +338,7 @@ var runme = {
       return gatewayRep;
     }
 
-    // UNFINISHED
+    // UNFINISHED: FIXME
     var handleEvent = function(eventNode, addToProcRep) {
       var eventRep = new NodeRepr(eventNode.localName);
       for( var ea = eventNode.attributes.length-1; ea >= 0; --ea ) { 
@@ -400,9 +419,9 @@ var runme = {
       // gateway
       complexGateway: unsupported,             //
       eventBasedGateway: unsupported,          //
-      exclusiveGateway: handleScratch,         // ?
-      inclusiveGateway: handleScratch,         // ?
-      parallelGateway: handleGateway,          //
+      exclusiveGateway: handleGateway,         // X
+      inclusiveGateway: handleGateway,         // X
+      parallelGateway: handleGateway,          // X
 
       // event
       startEvent: handleScratch,               // ?
@@ -466,7 +485,7 @@ var runme = {
       if( ! endMap[newNode.end] ) { 
         endMap[newNode.end] = [newNode];
       } else { 
-        runme.log( " *E " + newNode.end + " < " + newNode.beg ); // DBG
+        // runme.log( " *E " + newNode.end + " < " + newNode.beg ); // DBG
         newNode.preMerge = true;
         var ends = endMap[newNode.end];
         if( ends.length == 1 ) { 
@@ -480,7 +499,7 @@ var runme = {
       for( var s = graphRep.start.length-1; s >= 0; --s ) { 
         var startNode = graphRep.start[s];
         if( startNode.beg == newNode.end ) { 
-          runme.log( "r (" + newNode.beg + " >) " + startNode.beg + " > " + startNode.end ); // DBG
+          // runme.log( "r (" + newNode.beg + " >) " + startNode.beg + " > " + startNode.end ); // DBG
           nextMap[newNode.end].push(startNode);
         } else { 
           newStart.push(startNode);
@@ -495,7 +514,7 @@ var runme = {
         begMap[newNode.beg] = [newNode];
       } 
       else { 
-        runme.log( " *B " + newNode.beg + " > " + newNode.end ); // DBG
+        // runme.log( " *B " + newNode.beg + " > " + newNode.end ); // DBG
         newNode.postFork = true;
         var begs = begMap[newNode.beg];
         if( begs.length == 1 ) { 
@@ -513,7 +532,7 @@ var runme = {
   
         // add to end
         if( endMap[seq.from] ) { 
-          runme.log( "< (" + endMap[seq.from][0].beg + " >) " + seq.from + " -> " + seq.to ); // DBG
+          // runme.log( "< (" + endMap[seq.from][0].beg + " >) " + seq.from + " -> " + seq.to ); // DBG
           if( ! nextMap[seq.to] ) { 
             nextMap[seq.to] = [];
           }
@@ -532,7 +551,7 @@ var runme = {
   
           // insert before begin
           if( seq.to == begin.beg ) { 
-            runme.log( "> " + seq.from + " -> " + seq.to + " (> " + begin.end + ")" ); // DBG
+            // runme.log( "> " + seq.from + " -> " + seq.to + " (> " + begin.end + ")" ); // DBG
             if( ! nextMap[seq.to] ) { 
               nextMap[seq.to] = [];
             }
@@ -549,7 +568,7 @@ var runme = {
   
         // neither beg or end linked anywhere
         if( ! newNode ) {
-          runme.log( "! " + seq.from + " -> " + seq.to ); // DBG
+          // runme.log( "! " + seq.from + " -> " + seq.to ); // DBG
           if( ! nextMap[seq.to] ) { 
             nextMap[seq.to] = [];
           }
@@ -568,7 +587,7 @@ var runme = {
         if( ! endMap[graph.start[s].beg] ) { 
           newStart.push( graph.start[s] );
         } else { 
-          runme.log( "X " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
+          // runme.log( "X " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
         }
       }
       if( newStart.length != graph.start ) { 
@@ -615,21 +634,25 @@ var runme = {
       }
 
       procRep.inst = traverseGraph(procRep.graph.start[0], procRep.nodes, []);
+
       // delete procRep.nodes; // FIXME: after debug, put back in
-      // FIXME: once we know for sure: delete procRep.graph;
+      // delete procRep.graph; // FIXME: once we know for sure
 
     }
 
     var visited = {};
 
+    // context object parameter? for index, etc? 
     var traverseGraph = function(seq, nodes, candyString) { 
 
       while( seq != null ) { 
-        candyString.push(nodes[seq.beg].getClosure());
+        candyString.push(nodes[seq.end]);
 
         switch(seq.next.length) { 
           case 0:
-            candyString.push(nodes[seq.end].getClosure());
+            if( ! seq.preMerge ) { 
+              candyString.push(nodes[seq.end]);
+            }
             seq = null;
             break;
           case 1:
@@ -643,11 +666,26 @@ var runme = {
             seq = seq.next[0];
             break;
           default: 
-            throw new UnsupError( "Branching processes." );
+            throw new UnsupError( "Branching processes" );
+
+            var gatewayNode = nodes[seq.end];
+            runme.log( "D: " + gatewayNode.direction + " [" + gatewayNode.repType + "]" );
+            candyString.push(gatewayNode);
+
             var b = seq.next.length;
             while( --b >= 0 ) { 
-              // FIXME: visited!
+              if( nodes[seq.next[b].end].repType == "inclusiveGateway" ) { 
+                throw Error( "WHOOPS! :" + b );
+              }
+              var branch = traverseGraph(seq.next[b], nodes, []);
+              gatewayNode.branches.push(
+                [candyString.length, 
+                 candyString.length + branch.length-1]
+              );
             }
+
+            // seq = ??? 
+            // immediate branching from merge? 
         }
 
       }

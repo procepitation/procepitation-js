@@ -21,7 +21,7 @@ test( "Inclusive Gateway: diverging condition", function() {
   notEqual( procRep, null, "non-null process representation" );
   equal( procRep.seq.length, 7, "all sequences should be stored" );
   var l = 0; for( i in procRep.nodes ) { ++l; }
-  equal( l, 6, l + "all nodes should be stored" );
+  equal( l, 6, "all nodes should be stored" );
   
   var x = 0;
   for( var i = 0; i < procRep.seq.length; ++i ) { 

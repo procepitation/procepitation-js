@@ -19,7 +19,7 @@ runme.runProcess = function(process, defInst) {
     // * context pre-processing: 
     // ??
 
-    inst[i](context);
+    inst[i].execute(context);
 
     // * context post-processing: 
     // ??

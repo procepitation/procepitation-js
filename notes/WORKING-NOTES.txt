@@ -1,5 +1,8 @@
 
 - Work on creating process instances with branches, loops and subprocesses
+  - instance algorithm:
+    - get basic branching working with engine
+    - instance/execution: how to deal with loops? 
 
 - left over: 
   - make sure testing is more extensive and covers everything.. 
