@@ -1,8 +1,14 @@
 
 - Work on creating process instances with branches, loops and subprocesses
-  - instance algorithm:
-    - get basic branching working with engine
-    - instance/execution: how to deal with loops? 
+   - instance/execution: STARTED, UNFINISHED
+     - compileInstance (subfunction to createInstance): 
+       . no stopping at "preMerge" -- follow "branch" until end
+       . back and forth between: traverseBranch() and traverseFork()
+     - optimizeInstance? (subfunction in compileInstance?)
+       . figures out shortest branches, resets branch info, etc.
+
+! add test for gateway/InclusiveGatewayTest.testDivergingInclusiveGateway.bpmn20.xml
+  - end node is _after_ merge node (not the same as)
 
 - left over: 
   - make sure testing is more extensive and covers everything.. 

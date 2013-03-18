@@ -140,7 +140,7 @@ test( "Inclusive Gateway: loop", function() {
   ok( helper.postForkAndPreMergeTest(graph, endName ), "Recursive postFork, preMerge and 'End' test" );
 });
 
-test( "Nested Fork/Join:", function() {
+test( "Nested Fork/Join: basic", function() {
   expect(8);
   
   var xmlDoc = loadAndParse("bpmn/gateway/ParallelGatewayTest.testNestedForkJoin.bpmn20.xml");
@@ -186,6 +186,45 @@ test( "Nested Fork/Join: random sequence", function() {
   ok( helper.postForkAndPreMergeTest( graph, "End" ), "Recursive postFork, preMerge and 'End' test" );
 });
 
+test( "Nested Fork/Join: bad sequence", function() {
+  expect(5);
+  
+  var xmlDoc = loadAndParse("bpmn/gateway/ParallelGatewayTest.testNestedForkJoin.bpmn20.xml");
+  var defRep = runme.createRep(xmlDoc);
+  var procRep = defRep.process[0];
+  
+  // reorder process definition
+  var oldSeqs = procRep.seq;
+  var newSeqs = [];
+  newSeqs.push(oldSeqs[12]);
+  newSeqs.push(oldSeqs[8]);
+  newSeqs.push(oldSeqs[6]);
+  newSeqs.push(oldSeqs[11]);
+  
+  newSeqs.push(oldSeqs[2]);
+  newSeqs.push(oldSeqs[0]);
+  newSeqs.push(oldSeqs[10]);
+  newSeqs.push(oldSeqs[3]);
+  
+  newSeqs.push(oldSeqs[1]);
+  newSeqs.push(oldSeqs[7]);
+  newSeqs.push(oldSeqs[9]);
+  newSeqs.push(oldSeqs[4]);
+  
+  newSeqs.push(oldSeqs[5]);
+  equal( newSeqs.length, oldSeqs.length, "length of reorderd process definition");
+  procRep.seq = newSeqs;
+
+  var inst = runme.createGraph(defRep);
+  
+  notEqual( typeof defRep, "undefined", "non-null definition representation" );
+  ok( typeof defRep.process !== "undefined" && defRep.process.length > 0, 
+      "non-empty process array field" );
+  var graph = defRep.process[0].graph;
+  notEqual( typeof graph.start, "undefined", "non-null start node array" );
+  equal( graph.start.length, 1, "only one start node [" + graph.start.length + "]" );
+});
+
 
 module("[Instance]");
 
@@ -206,13 +245,23 @@ test( "Minimal Process: basic", function() {
   equal( procRep.inst.length, 3, "instance array has correct number of nodes" );
 });
 
-test( "Inclusive Gateway: diverging conditiont", function() {
-
+test( "Inclusive Gateway: diverging condition", function() {
+  expect(0);
+  
   var xmlDoc = loadAndParse("bpmn/gateway/InclusiveGatewayTest.testDivergingInclusiveGateway.bpmn20.xml");
   var defRep = runme.createRep(xmlDoc);
   defRep = runme.createGraph(defRep);
   defRep = runme.compileInstance(defRep);
 
+});
+
+test( "Parallel Gateway: nested fork join", function() {
+  expect(0);
+  
+  var xmlDoc = loadAndParse("bpmn/gateway/ParallelGatewayTest.testNestedForkJoin.bpmn20.xml");
+  var defRep = runme.createRep(xmlDoc);
+  defRep = runme.createGraph(defRep);
+  defRep = runme.compileInstance(defRep);
 });
 
 test( "Inclusive Gateway: loop", function() {

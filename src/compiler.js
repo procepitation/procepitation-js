@@ -316,7 +316,7 @@ var runme = {
     }
 
     var handleGateway = function(gatewayNode, gatewayParentRep) { 
-      runme.log( "GATEWAY: " + gatewayNode.localName );
+      // runme.log( "GATEWAY: " + gatewayNode.localName );
       var gatewayRep = new GatewayRepr(gatewayNode.localName);
       for( var sa = gatewayNode.attributes.length-1; sa >= 0; --sa ) { 
         switch( gatewayNode.attributes[sa].localName ) { 
@@ -473,9 +473,12 @@ var runme = {
     var begMap = new Object();
     var nextMap = new Object();
 
-    function GraphNode(beg, end) { 
-      this.beg = beg;
-      this.end = end;
+    function GraphNode(seq) { 
+      this.beg = seq.from;
+      this.end = seq.to;
+      if( seq.condition ) { 
+        this.cond = seq.condition;
+      }
     };
 
     var addToEndAndBegMap = function(newNode, graphRep) {
@@ -536,7 +539,7 @@ var runme = {
           if( ! nextMap[seq.to] ) { 
             nextMap[seq.to] = [];
           }
-          newNode = new GraphNode(seq.from, seq.to);
+          newNode = new GraphNode(seq);
           newNode.next = nextMap[seq.to];
   
           if( ! nextMap[seq.from] ) { 
@@ -545,8 +548,8 @@ var runme = {
           nextMap[seq.from].push(newNode);
         } 
   
-        graphStart: 
-        for( var b = graph.start.length-1; b >= 0; --b ) { 
+        var b = graph.start.length;
+        while( --b >= 0 ) { 
           var begin = graph.start[b];
   
           // insert before begin
@@ -558,7 +561,7 @@ var runme = {
             var next = nextMap[seq.to];
             next.push(begin);
             if( ! newNode ) { 
-              newNode = new GraphNode(seq.from, seq.to);
+              newNode = new GraphNode(seq);
               newNode.next = next;
             }
   
@@ -572,7 +575,7 @@ var runme = {
           if( ! nextMap[seq.to] ) { 
             nextMap[seq.to] = [];
           }
-          newNode = new GraphNode(seq.from, seq.to);
+          newNode = new GraphNode(seq);
           newNode.next = nextMap[seq.to];
   
           graph.start.push(newNode);
@@ -583,9 +586,13 @@ var runme = {
   
       // clean up starts
       var newStart = [];
+      var alreadyAdded = {};
       for( var s = graph.start.length-1; s >= 0; --s ) { 
-        if( ! endMap[graph.start[s].beg] ) { 
+        var seqInfo = graph.start[s].beg + ">" + graph.start[s].end;
+        if( ! endMap[graph.start[s].beg] && ! alreadyAdded[seqInfo] ) { 
+          // runme.log( "+ " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
           newStart.push( graph.start[s] );
+          alreadyAdded[seqInfo] = true;
         } else { 
           // runme.log( "X " + graph.start[s].beg + " -> " + graph.start[s].end ); // DBG
         }
@@ -605,7 +612,7 @@ var runme = {
     while( --i >= 0 ) { 
       var proc = initDefRep.process[i];
       proc.graph = createProcessGraph(proc);
-      delete proc.seq;
+      // delete proc.seq; FIXME: delete!
 
       if( i < initDefRep.process.length-1 ) { 
         throw new UnsupError( "Multiple process definitions in one file" );
@@ -633,7 +640,9 @@ var runme = {
         throw new UnsupError( "Multiple start nodes" );
       }
 
-      procRep.inst = traverseGraph(procRep.graph.start[0], procRep.nodes, []);
+      var wholeArray = [procRep.nodes[procRep.graph.start[0].beg]];
+      var graphResult = traverseBranch(procRep.graph.start[0], procRep.nodes, wholeArray);
+      procRep.inst = graphResult.candyString;
 
       // delete procRep.nodes; // FIXME: after debug, put back in
       // delete procRep.graph; // FIXME: once we know for sure
@@ -643,56 +652,104 @@ var runme = {
     var visited = {};
 
     // context object parameter? for index, etc? 
-    var traverseGraph = function(seq, nodes, candyString) { 
-
-      while( seq != null ) { 
-        candyString.push(nodes[seq.end]);
-
-        switch(seq.next.length) { 
-          case 0:
-            if( ! seq.preMerge ) { 
-              candyString.push(nodes[seq.end]);
-            }
-            seq = null;
-            break;
-          case 1:
-            // check if visited? 
-            if( visited[seq.end] ) { 
-              seq = null;
-              continue;
-            }
-            visited[seq.end] = true;
-
-            seq = seq.next[0];
-            break;
-          default: 
-            throw new UnsupError( "Branching processes" );
-
-            var gatewayNode = nodes[seq.end];
-            runme.log( "D: " + gatewayNode.direction + " [" + gatewayNode.repType + "]" );
-            candyString.push(gatewayNode);
-
-            var b = seq.next.length;
-            while( --b >= 0 ) { 
-              if( nodes[seq.next[b].end].repType == "inclusiveGateway" ) { 
-                throw Error( "WHOOPS! :" + b );
-              }
-              var branch = traverseGraph(seq.next[b], nodes, []);
-              gatewayNode.branches.push(
-                [candyString.length, 
-                 candyString.length + branch.length-1]
-              );
-            }
-
-            // seq = ??? 
-            // immediate branching from merge? 
-        }
-
+    var traverseBranch = function(seq, nodes, thisBranch) { 
+      var result = { 
+        candyString : thisBranch,
+        nextSeq : seq
       }
 
-      return candyString;
+      while( seq != null ) { 
+        if( visited[seq.end] ) { 
+          break; 
+        }
+
+        // add nodes[seq.end] to thisBranch
+        var thisNode = nodes[seq.end]
+        thisBranch.push(thisNode);
+        visited[seq.end] = true;
+
+        switch(seq.next.length) {
+          case 0:
+            seq = null;
+            result.nextSeq = null;
+            break;
+          case 1:
+            seq = seq.next[0];
+            result.nextSeq = seq;
+            break;
+          default: 
+            var forkResult = traverseFork(thisNode, seq.next, nodes);
+            result.nextSeq = forkResult.nextSeq;
+            seq = forkResult.nextSeq;
+        }
+      }
+
+      return result;
     }
 
+    var traverseFork = function(thisNode, forkSeqs, nodes) { 
+      var forksBranch = [];
+      var forkResult = { 
+        candyString : forksBranch,
+        nextSeq : null
+      }
+
+      while( forkSeqs != null ) { 
+        // Go through branches
+        var nextSeqs = [];
+        var f = forkSeqs.length;
+        while( --f >= 0 ) { 
+          var branchResult = traverseBranch(forkSeqs[f], nodes, []);
+          var newBranch = branchResult.candyString;
+          // 1. add branch info to gateway node
+          thisNode.branches.push(
+            [forksBranch.length, 
+             forksBranch.length + newBranch.length]
+          );
+          // 2. add newBranch to existing candy string
+          var nbi = 0; 
+          for( ; nbi < newBranch.length; ++nbi ) { 
+            forksBranch.push(newBranch[nbi]);
+          }
+          // 3. save branch.nextSeq 
+          if( branchResult.nextSeq != null ) { 
+            nextSeqs.push( branchResult.nextSeq );
+          }
+        }
+  
+        // Determine next seq
+        if( nextSeqs.length == 0 ) { 
+          forkSeqs = null;
+        } else { 
+          var ns = nextSeqs.length-1;
+          var newSeq = nextSeqs[ns];
+          while( --ns >= 0 ) { 
+            // DEBUG? 
+            if( newSeq.end != nextSeqs[ns].end ) { 
+              throw new Error( newSeq.beg + "/" + newSeq.end + " != " 
+                               + nextSeqs[ns].beg + "/" + nextSeqs[ns].end );
+            }
+          }
+  
+          // Add node where branches merged
+          thisNode = nodes[newSeq.end];
+          forksBranch.push(thisNode);
+   
+          // Are we immediately reforking? 
+          switch(newSeq.next.length) { 
+            case 1:
+              forkResult.nextSeq = newSeq.next[0];
+            case 0:
+              forkSeqs = null;
+              break;
+            default: 
+              forkSeqs = newSeq.next;
+          } 
+        }
+      }
+      
+      return forkResult;
+    }
 
     var i = thisDefRep.process.length;
     while( --i >= 0 ) { 
