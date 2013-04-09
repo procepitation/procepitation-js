@@ -1,0 +1,118 @@
+
+= The Compiler Algorithm
+
+
+== Input and Output for the Compiler
+
+So, 'sup, yo? You want to learn about this compiler javascript algorithm that 
+we got here. 
+
+Well, this is what goes in:    
+
+- A W3 HTML Document object containing a parsed BPMN2 file
+
+and this is what comes out:    
+
+- A definition instance that the engine can run. 
+
+A 'definition instance' is a JavaScript object that contains 1 or more process 
+instances. And a a 'process instance' is a array-like datastructure for the 
+engine. 
+
+== Parsing the BPMN2 XML 
+
+=== Creating a JavaScript Document object from a BPMN2 file
+
+Of course, the compiler does not parse XML -- it processes a JavaScript DOM 
+object. Your BPMN2 file has to be available somewhere: either via the server
+or locally. 
+
+If you don't know how to create a Document object from a file, you can do it 
+like this:
+ 
+[source, javascript]
+----
+  // Retrieve the BPMN2 file
+  var xmlhttp = new XMLHttpRequest();
+  xmlhttp.open("GET", bpmn2File, false);
+
+  xmlhttp.send();
+  var bpmn2Txt = xmlhttp.responseText;
+
+  if( xmlhttp.status != 200 ) { 
+    throw new Error( "Unable to GET '" + bpmn2File + "': " + xmlhttp.statusText );
+  }
+ 
+  var parser = new DOMParser();
+  var xmlDoc = parser.parseFromString(bpmn2Txt, "text/xml");
+----
+
+.IE specific code
+NOTE: The above code works for every browser *except* IE6 and IE5 and below. If
+you're programming for those browsers, you'll have to use ActiveXObject
+instances to retrieve and parse a BPMN2 xml document.
+
+=== Parsing the DOM Object
+
+Luckily, the Document object contains lots of handy methods for extracting
+information about the elements and nodes in the BPMN2 (XML) file. 
+
+We use a lookup table to lookup the proper functions to handle different
+elements. Because the definition is XML (based on both XSD and CMOF files), we
+can write 'handler functions' to handle each element and store a reference to
+them in a lookup table. 
+
+For example, the function that handles all the children elements of a process
+element looks like this: 
+
+[source, javascript]
+----
+  var handleProcessChildren = function(procTypeNode, procTypeRep) { 
+    procTypeRep.nodes = {};
+    for( var n = procTypeNode.children.length-1; n >= 0; --n ) {
+      var child = procTypeNode.children[n];
+      if( child.nodeType == 1 && child.prefix == bpmn2Prefix ) { 
+        if( processProcessElement[child.localName] ) { 
+          processProcessElement[child.localName](child, procTypeRep); 
+        } else { 
+          throw new UnsupError("'" + child.localName + "' elements in a process");
+        }
+      } 
+    }
+
+  }
+----
+
+The beginning of the `processProcessElement` table (object), looks like this: 
+
+[source, javascript]
+----
+ var processProcessElement = { 
+    sequenceFlow: handleSequenceFlow,
+
+    subProcess: handleSubProcess,
+    adHocSubProcess: unsupported,
+  // ...
+----
+
+=== The Definition Representation
+
+The resulting object that's created during this step, is a half-step from 
+the BPMN2 XML representation to the final `definition instance` represenation. 
+
+On one hand, it contains the function 
+fields: 
+
+- a `.processes` field that .. 
+  * a `.nodes` field that is a map of all process (non-sequenceFlow) nodes 
+    based on the id attribute of the XML element for that node. 
+  * a `.seqs` field that contains the list of `sequenceFlow` elements for that 
+    process (but *not* for any possibly existing subprocesses).
+  * a `.attr` field that contains any attributes for 
+
+== Creating a Graph Representation
+
+
+== Creating a process instance
+
+
