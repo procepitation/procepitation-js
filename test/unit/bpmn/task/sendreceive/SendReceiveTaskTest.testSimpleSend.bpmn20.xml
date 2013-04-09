@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<definitions id="Definition"
+             targetNamespace="http://www.example.org/MinimalExample"
+             typeLanguage="http://www.java.com/javaTypes"
+             expressionLanguage="http://www.mvel.org/2.0"
+             xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:tns="http://www.jboss.org/drools">
+
+  <itemDefinition id="_sItem" />
+
+  <itemDefinition id="_2_MessageType" />
+  <message id="_2_Message" itemRef="_2_MessageType" />
+
+  <process processType="Private" isExecutable="true" id="SendTask" name="Send Task" >
+
+    <!-- process variables -->
+    <property id="s" itemSubjectRef="_sItem"/>
+
+    <!-- nodes -->
+    <startEvent id="_1" name="StartProcess" />
+    <sendTask id="_2" name="Hello" messageRef="_2_Message" implementation="Other" >
+      <ioSpecification>
+        <dataInput id="_2_param" name="Message" />
+        <inputSet>
+          <dataInputRefs>_2_param</dataInputRefs>
+        </inputSet>
+        <outputSet/>
+      </ioSpecification>
+      <dataInputAssociation>
+        <sourceRef>s</sourceRef>
+        <targetRef>_2_param</targetRef>
+      </dataInputAssociation>
+    </sendTask>
+    <endEvent id="_3" name="EndProcess" >
+        <terminateEventDefinition/>
+    </endEvent>
+
+    <!-- connections -->
+    <sequenceFlow id="_1-_2" sourceRef="_1" targetRef="_2" />
+    <sequenceFlow id="_2-_3" sourceRef="_2" targetRef="_3" />
+
+  </process>
+
+</definitions>

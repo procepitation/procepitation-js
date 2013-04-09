@@ -8,15 +8,7 @@
              xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd"
              xmlns:tns="http://www.example.org/EvaluationExample">
 
-  <!-- item definitions -->
-  <itemDefinition id="employeeId" structureRef="java.lang.String" />
-  
-  <!-- data store -->
-  <dataStore id="employee" name="employeeStore" itemSubjectRef="tns:employeeId" />
-  
   <process id="Evaluation" name="Evaluation Process">
-    
-    
   
     <!-- nodes -->  
     <startEvent id="_1" name="StartProcess"/>
@@ -31,5 +23,7 @@
     <sequenceFlow sourceRef="_1" targetRef="_2"/>
     <sequenceFlow sourceRef="_2" targetRef="_3"/>
     
+    <!-- associations -->
+    <association id="_1234" sourceRef="_1" targetRef="_2"/>
   </process>
 </definitions>
