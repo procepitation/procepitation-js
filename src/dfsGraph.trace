@@ -1,0 +1,91 @@
+
+a: 
+  i == 0
+  * pre: a
+  nc = 1
+  child = b
+  stack = new stack(a, stack, 1)
+  * before: a, b
+  node = b
+  i = 0
+  i != nc
+  ? POST
+b: 
+  i == 0
+  * pre: b
+  nc = 2
+  child = c
+  stack = new stack(b, stack, 1)
+  * before: b, c
+  node = c
+  i = 0
+  i != nc
+c:
+  i == 0
+  * pre: c
+  nc = 1
+  - visit: c, e
+  * skip: c, e
+  (i = 1)
+  i == nc
+  * post: c
+  * after: b, c
+  node = b 
+  stack = stack.prev
+  i = 1
+  ? POST
+b: 
+  (i = 1)
+  i != 0
+  nc = 2
+  child = d
+  + visit: b, d
+  stack = new stack(b, stack, 2)
+  * before: b, d
+  node = d
+  i = 0
+  i != nc
+d:
+  i == 0
+  * pre: d
+  nc = 1
+  child = e
+  + visit: d, e
+  stack = new stack(d, stack, 1)
+  * before: d, e 
+  node = e
+  i = 0
+  i != nc
+e: 
+  i == 0
+  * pre: e
+  nc = 1
+  child = f
+  + visit: e, f
+  stack = new stack(e, stack, 1)
+  * before: e, f
+  node = f
+  i = 0
+  i != nc
+f: 
+  i == 0
+  * pre: f
+  nc = 0 
+  i == nc
+  * post: f
+  * afterChild(e, f)
+  node = d
+  stack = stack.prev
+  i = 1
+e: 
+  (i = 1)
+  i != 0
+  nc = 1
+  i == nc
+  * post: e
+  * after: d, e 
+  node = d
+  stack = stack.prev
+  i = 1
+d: 
+ 
