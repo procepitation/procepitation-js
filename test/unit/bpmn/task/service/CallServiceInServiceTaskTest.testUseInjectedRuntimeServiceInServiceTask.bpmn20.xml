@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <definitions 
   xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
-  xmlns:activiti="http://activiti.org/bpmn"
   targetNamespace="Examples">
 
   <process id="startProcessFromDelegate" isExecutable="true">
@@ -9,7 +8,7 @@
     <startEvent id="theStart" />
     <sequenceFlow id="flow1" sourceRef="theStart" targetRef="service" />
     
-    <serviceTask id="service" activiti:class="org.activiti.engine.test.bpmn.servicetask.StartProcessInstanceTestDelegate" />
+    <serviceTask id="service" /> [FIX ME]
     <sequenceFlow id="flow2" sourceRef="service" targetRef="task" />
     
     <userTask id="task" />
