@@ -1,4 +1,34 @@
 
+runme.createRep(xmlDoc) creates the following object: 
+
+    defRep: 
+      process // array of process definition representations
+        attr  // map {id => value} of attributes of process elem (id => value)
+        nodes // map {id => node} of executable node objects
+        seq   // array of executable sequence flow objects
+
+runme.createGraph(defRep) adds the following to the same object: 
+
+    defRep
+      process 
+        graph // graph representation
+
+
+runme.compileInstance(defRep) adds the following to the same object: 
+
+    defRep 
+      process 
+        inst // this is the process instance that can be process by the engine
+
+if debug is *off*, then the following elements are deleted: 
+
+    defRep
+      process 
+        nodes // these nodes are now present in the inst
+        seq   // 
+        graph // array of executable sequence flow objects
+
+
 - Work on creating process instances with branches, loops and subprocesses
    - instance/execution: STARTED, UNFINISHED
      - compileInstance (subfunction to createInstance): 
