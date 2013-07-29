@@ -250,8 +250,8 @@ test( "Inclusive Gateway: diverging condition", function() {
   
   var xmlDoc = loadAndParse("bpmn/gateway/inclusive/InclusiveGatewayTest.testDivergingInclusiveGateway.bpmn20.xml");
   var defRep = runme.createRep(xmlDoc);
-  defRep = runme.createGraph(defRep);
-  defRep = runme.compileInstance(defRep);
+  var graphRep = runme.createGraph(defRep);
+  var inst = runme.compileInstance(graphRep);
 
 });
 
