@@ -9,3 +9,6 @@
 
 # scratch files
 /scratch/
+
+# web server logs
+/pyweb.log
